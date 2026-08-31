@@ -1,4 +1,4 @@
-import logo from '../logo-pjj-web.webp';
+import { logo } from './logo';
 import { html } from './http';
 import { randomToken } from './crypto';
 
