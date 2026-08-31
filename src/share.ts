@@ -27,9 +27,22 @@ export function sharePage(token:string):Response{
 }
 
 export async function authenticateGrant(request:Request,env:Env,rid:string):Promise<Response>{
-  let input:{token:string;pin?:string};try{input=await readJson(request)}catch{return error(400,'invalid_json','Dados inválidos.',rid)}const grant=await grantFromToken(env,input.token||'');if(!grant)return error(403,'grant_denied','Link inválido, expirado ou esgotado.',rid);
-  if(grant.pin_hash){const supplied=await sha256Hex(await sha256Hex(input.token)+':'+(input.pin||''));if(!await constantTimeEqual(supplied,grant.pin_hash))return error(403,'invalid_pin','PIN inválido.',rid)}
+  let input:{token:string;pin?:string};try{input=await readJson(request)}catch{return error(400,'invalid_json','Dados inválidos.',rid)}
+  const ipHash=await sha256Hex(request.headers.get('cf-connecting-ip')||'unknown'),tokenHash=await sha256Hex(input.token||''),rateKey=`share:${ipHash}:${tokenHash.slice(0,16)}`;
+  const rate=await env.DB.prepare('SELECT attempts,blocked_until FROM rate_limits WHERE key=?1').bind(rateKey).first<{attempts:number;blocked_until:string|null}>();
+  if(rate?.blocked_until&&new Date(rate.blocked_until).getTime()>Date.now())return error(429,'temporarily_blocked','Muitas tentativas. Aguarde antes de tentar novamente.',rid);
+  const grant=await grantFromToken(env,input.token||'');if(!grant)return error(403,'grant_denied','Link inválido, expirado ou esgotado.',rid);
+  if(grant.pin_hash){const supplied=await sha256Hex(tokenHash+':'+(input.pin||''));if(!await constantTimeEqual(supplied,grant.pin_hash)){
+    await env.DB.prepare(`INSERT INTO rate_limits(key,window_started_at,attempts,blocked_until) VALUES(?1,CURRENT_TIMESTAMP,1,NULL)
+      ON CONFLICT(key) DO UPDATE SET attempts=CASE WHEN window_started_at<datetime('now','-15 minutes') THEN 1 ELSE attempts+1 END,
+      window_started_at=CASE WHEN window_started_at<datetime('now','-15 minutes') THEN CURRENT_TIMESTAMP ELSE window_started_at END,
+      blocked_until=CASE WHEN attempts>=7 THEN datetime('now','+30 minutes') ELSE blocked_until END,updated_at=CURRENT_TIMESTAMP`).bind(rateKey).run();
+    await audit(env,{requestId:rid,actorType:'grant',actorId:grant.id,action:'grant.pin_denied',targetType:'access_grant',targetId:grant.id,outcome:'denied',ipHash});
+    return error(403,'invalid_pin','PIN inválido.',rid)
+  }}
+  await env.DB.prepare('DELETE FROM rate_limits WHERE key=?1').bind(rateKey).run();
   const session=randomToken();await env.DB.batch([env.DB.prepare("INSERT INTO sessions(id,grant_id,token_hash,csrf_hash,expires_at,idle_expires_at) VALUES(?1,?2,?3,?4,datetime('now','+24 hours'),datetime('now','+30 minutes'))").bind(crypto.randomUUID(),grant.id,await sha256Hex(session),await sha256Hex(randomToken())),env.DB.prepare('UPDATE access_grants SET use_count=use_count+1 WHERE id=?1').bind(grant.id)]);
+  await audit(env,{requestId:rid,actorType:'grant',actorId:grant.id,action:'grant.authenticated',targetType:'access_grant',targetId:grant.id,ipHash});
   return json({authenticated:true},200,{'set-cookie':cookie(session)});
 }
 
