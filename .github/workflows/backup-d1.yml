@@ -21,5 +21,8 @@ jobs:
       - run: python processor/backup.py
         env:
           GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON }}
+          DRIVE_OAUTH_CLIENT_ID: ${{ secrets.DRIVE_OAUTH_CLIENT_ID }}
+          DRIVE_OAUTH_CLIENT_SECRET: ${{ secrets.DRIVE_OAUTH_CLIENT_SECRET }}
+          DRIVE_OAUTH_REFRESH_TOKEN: ${{ secrets.DRIVE_OAUTH_REFRESH_TOKEN }}
           PJJ_PROCESSOR_ORIGIN: ${{ vars.PJJ_PROCESSOR_ORIGIN }}
           DRIVE_ROOT_FOLDER_ID: 1sVA2TzVvAQ4mRGSzU6PvXF5vbIFspAvz

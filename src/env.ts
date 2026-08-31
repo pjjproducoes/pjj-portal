@@ -4,6 +4,9 @@ export interface Env {
   DRIVE_ROOT_FOLDER_ID: string;
   PUBLIC_ORIGIN: string;
   DRIVE_SERVICE_ACCOUNT_JSON: string;
+  DRIVE_OAUTH_CLIENT_ID?: string;
+  DRIVE_OAUTH_CLIENT_SECRET?: string;
+  DRIVE_OAUTH_REFRESH_TOKEN?: string;
   SESSION_HMAC_KEY: string;
   DATA_ENCRYPTION_KEY: string;
   ADMIN_BOOTSTRAP_HASH: string;

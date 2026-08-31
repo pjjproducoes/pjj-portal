@@ -13,6 +13,10 @@ Produto digital da PJJ Produções para site institucional, administração, por
 
 Segredos ficam apenas em bindings secretos da Cloudflare e nunca no repositório.
 
+Para Google Drive pessoal, configure `DRIVE_OAUTH_CLIENT_ID`, `DRIVE_OAUTH_CLIENT_SECRET` e
+`DRIVE_OAUTH_REFRESH_TOKEN`. A conta de serviço continua autenticando o executor interno;
+o OAuth do proprietário fornece a cota de armazenamento exigida pelo Google para gravar arquivos.
+
 ## Componentes
 
 - `src/`: Worker modular, site, admin, portal, autenticação, MFA, uploads, autorização, embeds e viewers.

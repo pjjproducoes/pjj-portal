@@ -1,4 +1,4 @@
-import argparse, hashlib, json, os, pathlib, shutil, urllib.request
+import argparse, hashlib, json, os, pathlib, shutil, urllib.parse, urllib.request
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 from server import process
@@ -18,6 +18,11 @@ def api(path, payload=None):
         raise RuntimeError(f'portal_{error.code}_{error.read().decode()[:1000]}')
 
 def token():
+    refresh=os.getenv('DRIVE_OAUTH_REFRESH_TOKEN')
+    if refresh:
+        body=urllib.parse.urlencode({'client_id':os.environ['DRIVE_OAUTH_CLIENT_ID'],'client_secret':os.environ['DRIVE_OAUTH_CLIENT_SECRET'],'refresh_token':refresh,'grant_type':'refresh_token'}).encode()
+        with urllib.request.urlopen(urllib.request.Request('https://oauth2.googleapis.com/token',data=body,method='POST',headers={'content-type':'application/x-www-form-urlencoded'}),timeout=60) as response:
+            value=json.loads(response.read());return value['access_token'],int(value.get('expires_in',3600))
     credentials=service_account.Credentials.from_service_account_info(SERVICE_ACCOUNT,scopes=['https://www.googleapis.com/auth/drive'])
     credentials.refresh(Request())
     return credentials.token,max(120,int((credentials.expiry.timestamp()-__import__('time').time())))
