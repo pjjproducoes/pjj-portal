@@ -6,5 +6,6 @@ dist/
 !.env.example
 coverage/
 *.log
+__pycache__/
+*.py[cod]
 backup/*.sql
-
