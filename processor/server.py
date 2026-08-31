@@ -33,12 +33,27 @@ def sha256(path):
       for block in iter(lambda:f.read(8*1024*1024),b''):h.update(block)
     return h.hexdigest()
 
+def detected_kind(path,declared):
+    mime=run('file','--brief','--mime-type',str(path)).strip()
+    suffix=path.suffix.lower()
+    if mime in ('image/tiff','image/geotiff'):
+      try:
+        info=json.loads(run('gdalinfo','-json',str(path)))
+        if info.get('coordinateSystem') and (info.get('geoTransform') or info.get('gcps')):return declared if declared in ('orthophoto','dsm','dtm') else 'orthophoto',mime
+      except Exception:pass
+    if suffix in ('.las','.laz','.copc'):return 'point_cloud',mime
+    if suffix in ('.glb','.gltf','.obj','.fbx','.dae','.ply','.stl'):return 'model_3d',mime
+    if mime.startswith('image/'):return 'photo',mime
+    if mime.startswith('video/'):return 'video',mime
+    if mime=='application/pdf':return 'pdf',mime
+    return declared,mime
+
 def process(job):
     required=['accessToken','inputFileId','outputFolderId','assetId','type','originalName']
     if any(not job.get(k) for k in required):raise ValueError('missing_job_field')
     with tempfile.TemporaryDirectory(prefix='pjj-') as tmp:
       original=pathlib.Path(tmp)/pathlib.Path(job['originalName']).name;download(job['inputFileId'],job['accessToken'],original)
-      kind=job['type']; outputs=[]; metadata={'inputSha256':sha256(original),'inputBytes':original.stat().st_size}
+      kind,detected_mime=detected_kind(original,job['type']); outputs=[]; metadata={'inputSha256':sha256(original),'inputBytes':original.stat().st_size,'declaredType':job['type'],'detectedType':kind,'detectedMimeType':detected_mime}
       if kind in ('orthophoto','dsm','dtm'):
         info=json.loads(run('gdalinfo','-json',str(original)));metadata['gdal']=info
         if not info.get('coordinateSystem') or not (info.get('geoTransform') or info.get('gcps')):
@@ -63,7 +78,13 @@ def process(job):
         copc=pathlib.Path(tmp)/(original.stem+'.copc.laz')
         pipeline={'pipeline':[str(original),{'type':'writers.copc','filename':str(copc),'forward':'all'}]}
         pipeline_path=pathlib.Path(tmp)/'pipeline.json';pipeline_path.write_text(json.dumps(pipeline));run('pdal','pipeline',str(pipeline_path));outputs.append(('copc',copc,'application/vnd.laszip'))
-      elif kind in ('photo','video','pdf','document','source','other'):
+      elif kind=='photo':
+        preview=pathlib.Path(tmp)/(original.stem+'.preview.jpg');run('convert',str(original)+'[0]','-auto-orient','-thumbnail','1600x1600>','-strip','-quality','86',str(preview));outputs.append(('preview',preview,'image/jpeg'));metadata['validated']=True
+      elif kind=='video':
+        preview=pathlib.Path(tmp)/(original.stem+'.preview.jpg');run('ffmpeg','-hide_banner','-loglevel','error','-ss','00:00:01','-i',str(original),'-frames:v','1','-vf','scale=1600:-2:force_original_aspect_ratio=decrease','-q:v','3',str(preview));outputs.append(('preview',preview,'image/jpeg'));metadata['validated']=True
+      elif kind=='pdf':
+        prefix=pathlib.Path(tmp)/(original.stem+'.preview');run('pdftoppm','-f','1','-singlefile','-jpeg','-scale-to','1600',str(original),str(prefix));preview=pathlib.Path(str(prefix)+'.jpg');outputs.append(('preview',preview,'image/jpeg'));metadata['validated']=True
+      elif kind in ('document','source','other'):
         metadata['validated']=True
       else:raise ValueError('unsupported_asset_type')
       variants=[]

@@ -36,15 +36,18 @@ async function authorizedEmbed(request:Request,env:Env,token:string){
 export async function embedPage(request:Request,env:Env,token:string,rid:string):Promise<Response>{
   const embed=await authorizedEmbed(request,env,token);if(!embed)return error(403,'embed_denied','Este domínio não está autorizado.',rid);
   const assets=await env.DB.prepare(`SELECT id,type,title,mime_type FROM assets WHERE project_id=?1 AND status='published' ORDER BY created_at DESC`).bind(embed.project_id).all();
+  const allowed=JSON.parse(embed.allowed_products_json||'[]') as string[];const visible=(assets.results as any[]).filter(a=>!allowed.length||allowed.includes(a.id)||allowed.includes(a.type));
   const nonce=randomToken(12),ancestors=embed.domains.map(d=>`https://${d} https://*.${d}`).join(' ');
-  const items=assets.results.map((a:any)=>`<li><strong>${escapeHtml(a.title)}</strong><span>${escapeHtml(a.type)}</span><a href="/api/embed/${token}/assets/${a.id}/content" target="_blank" rel="noopener">Abrir</a></li>`).join('');
+  const items=visible.map((a:any)=>`<li><strong>${escapeHtml(a.title)}</strong><span>${escapeHtml(a.type)}</span><a href="/api/embed/${token}/assets/${a.id}/content" target="_blank" rel="noopener">Abrir</a></li>`).join('');
   const markup=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${escapeHtml(embed.project_name)}</title><style nonce="${nonce}">body{margin:0;background:#f3f3ee;color:#172620;font:15px system-ui}.head{padding:20px 24px;background:#163f34;color:#fff}.head small{opacity:.7}ul{list-style:none;margin:0;padding:16px;display:grid;gap:10px}li{display:grid;grid-template-columns:1fr auto auto;gap:16px;align-items:center;background:#fff;padding:16px;border-radius:12px}a{color:#23634f;font-weight:700}</style></head><body><header class="head"><small>PJJ Portal</small><h2>${escapeHtml(embed.project_name)}</h2></header><ul>${items||'<li>Nenhum produto publicado.</li>'}</ul></body></html>`;
   const response=html(markup,nonce);response.headers.set('content-security-policy',`default-src 'none'; style-src 'nonce-${nonce}'; frame-ancestors ${ancestors}; base-uri 'none'`);response.headers.delete('x-frame-options');return response;
 }
 
 export async function embedAsset(request:Request,env:Env,token:string,assetId:string,rid:string):Promise<Response>{
   const embed=await authorizedEmbed(request,env,token);if(!embed)return error(403,'embed_denied','Este domínio não está autorizado.',rid);
+  const allowed=JSON.parse(embed.allowed_products_json||'[]') as string[];
   const row=await env.DB.prepare("SELECT original_drive_file_id,mime_type,original_name FROM assets WHERE id=?1 AND project_id=?2 AND status='published'").bind(assetId,embed.project_id).first<{original_drive_file_id:string|null;mime_type:string|null;original_name:string}>();
+  const typeRow=await env.DB.prepare("SELECT type FROM assets WHERE id=?1").bind(assetId).first<{type:string}>();if(allowed.length&&!allowed.includes(assetId)&&!allowed.includes(typeRow?.type||''))return error(403,'product_denied','Este produto não está liberado no embed.',rid);
   if(!row?.original_drive_file_id)return error(404,'asset_not_found','Arquivo não encontrado.',rid);const upstream=await streamFile(env,row.original_drive_file_id,request.headers.get('range'));if(!upstream.ok&&upstream.status!==206)return error(502,'drive_stream_failed','Falha ao transmitir.',rid);
   const headers=new Headers({'content-type':row.mime_type||'application/octet-stream','cache-control':'private, no-store','accept-ranges':'bytes','x-content-type-options':'nosniff'});for(const h of ['content-length','content-range']){const v=upstream.headers.get(h);if(v)headers.set(h,v)}return new Response(upstream.body,{status:upstream.status,headers});
 }

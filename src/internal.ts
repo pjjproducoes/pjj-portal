@@ -73,8 +73,10 @@ export async function internalRoute(request: Request, env: Env, rid: string): Pr
       VALUES(?1,?2,?3,?4,?5,?6,?7,?8,'ready') ON CONFLICT(asset_id,variant_type) DO UPDATE SET drive_file_id=excluded.drive_file_id,
       format=excluded.format,mime_type=excluded.mime_type,size_bytes=excluded.size_bytes,checksum_sha256=excluded.checksum_sha256,status='ready',updated_at=CURRENT_TIMESTAMP`)
       .bind(crypto.randomUUID(), job.asset_id, v.type, v.driveFileId, v.format, v.mimeType || null, v.sizeBytes || null, v.sha256 || null));
-    statements.push(env.DB.prepare("UPDATE assets SET status='review',metadata_json=?2,error_code=NULL,error_message=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?1")
-      .bind(job.asset_id, JSON.stringify(input.metadata || {})));
+    const detected=(input.metadata as {detectedType?:string}|undefined)?.detectedType;
+    const validTypes=new Set(['orthophoto','dsm','dtm','model_3d','point_cloud','photo','video','pdf','document','source','other']);
+    statements.push(env.DB.prepare("UPDATE assets SET status='review',type=CASE WHEN ?3 IS NOT NULL THEN ?3 ELSE type END,metadata_json=?2,error_code=NULL,error_message=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?1")
+      .bind(job.asset_id, JSON.stringify(input.metadata || {}),detected&&validTypes.has(detected)?detected:null));
     statements.push(env.DB.prepare("UPDATE processing_jobs SET status='succeeded',progress=100,finished_at=CURRENT_TIMESTAMP,heartbeat_at=CURRENT_TIMESTAMP,output_json=?2 WHERE id=?1")
       .bind(jobId, JSON.stringify({ metadata: input.metadata || {}, variants })));
     await env.DB.batch(statements);

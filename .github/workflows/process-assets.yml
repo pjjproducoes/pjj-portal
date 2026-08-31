@@ -30,7 +30,7 @@ jobs:
         if: steps.prepare.outputs.has_job == 'true'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends gdal-bin pdal assimp-utils
+          sudo apt-get install -y --no-install-recommends gdal-bin pdal assimp-utils file ffmpeg poppler-utils imagemagick
           sudo npm install --global @gltf-transform/cli
       - name: Processar arquivo reservado
         if: steps.prepare.outputs.has_job == 'true'
