@@ -1,59 +1,53 @@
-YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éíßnıN‹Z–‹­¦ëeŠw¬Õ¥µÁ½ÉĞÑåÁ”ì¹Øô™É½´€œ¸½•¹Øœì)¥µÁ½ÉĞÑåÁ”ìAÉ¥¹¥Á…°ô™É½´€œ¸½…ÕÑ œì)¥µÁ½ÉĞì…Õ‘¥Ğô™É½´€œ¸½…Õ‘¥Ğœì)¥µÁ½ÉĞì½¹ÍÑ…¹ÑQ¥µ•ÅÕ…°°É…¹‘½µQ½­•¸°Í¡„ÈÔÙ!•àô™É½´€œ¸½ÉåÁÑ¼œì)¥µÁ½ÉĞìÍÑÉ•…µ¥±”ô™É½´€œ¸½‘É¥Ù”œì)¥µÁ½ÉĞì•ÉÉ½È°¡Ñµ°°©Í½¸°Á…ÉÍ•½½­¥”°É•…‘)Í½¸°Í…™•%¹±¥¹•5¥µ”ô™É½´€œ¸½¡ÑÑÀœì()½¹ÍĞ½½­¥”ô¡ØéÍÑÉ¥¹œ±µ…àôàØĞÀÀ¤ôùÁ©©}Í¡…É”ô‘í•¹½‘•UI%½µÁ½¹•¹Ğ¡Ø¥ôìA…Ñ ô½…Á¤½Í¡…É”ì!ÑÑÁ=¹±äìM•ÕÉ”ìM…µ•M¥Ñ”õMÑÉ¥Ğì5…àµ”ô‘íµ…áõ€ì()•áÁ½ÉĞ…Íå¹Œ™Õ¹Ñ¥½¸É•…Ñ•É…¹Ğ¡É•ÅÕ•ÍĞéI•ÅÕ•ÍĞ±•¹Øé¹Ø±…Ñ½ÈéAÉ¥¹¥Á…°±É¥éÍÑÉ¥¹œ¤éAÉ½µ¥Í”ñI•ÍÁ½¹Í”ùì(€±•Ğ¥¹ÁÕĞéíÁÉ½©•Ñ%éÍÑÉ¥¹œí±…‰•°üéÍÑÉ¥¹œíÁ¥¸üéÍÑÉ¥¹œí•áÁ¥É•ÍĞüéÍÑÉ¥¹œíµ…áUÍ•Ìüé¹Õµ‰•ÈíÁ•Éµ¥ÍÍ¥½¸üèÙ¥•Üğ‘½İ¹±½…ôíÑÉåí¥¹ÁÕĞõ…İ…¥ĞÉ•…‘)Í½¸¡É•ÅÕ•ÍĞ¥õ…Ñ¡íÉ•ÑÕÉ¸•ÉÉ½È ĞÀÀ°¥¹Ù…±¥‘}©Í½¸œ°…‘½Ì¥¹Û…±¥‘½Ì¸œ±É¥¥ô(€½¹ÍĞÁÉ½©•Ğõ…İ…¥Ğ•¹Ø¹¹ÁÉ•Á…É” ‰M1P¥I=4ÁÉ½©•ÑÌ]!I¥ôüÄ9ÍÑ…ÑÕÌ„ôÑÉ…Í¡•œˆ¤¹‰¥¹¡¥¹ÁÕĞ¹ÁÉ½©•Ñ%¤¹™¥ÉÍĞ ¤í¥˜ …ÁÉ½©•Ğ¥É•ÑÕÉ¸•ÉÉ½È ĞÀĞ°ÁÉ½©•Ñ}¹½Ñ}™½Õ¹œ°AÉ½©•Ñ¼»¼•¹½¹ÑÉ…‘¼¸œ±É¥¤ì(€¥˜¡¥¹ÁÕĞ¹Á¥¸˜˜„½yq‘ìĞ°ÄÁô¼¹Ñ•ÍĞ¡¥¹ÁÕĞ¹Á¥¸¤¥É•ÑÕÉ¸•ÉÉ½È ĞÀÀ°¥¹Ù…±¥‘}Á¥¸œ°UÍ”Õ´A%8‘”€Ğ„€ÄÀ“µ¥Ñ½Ì¸œ±É¥¤ì(€½¹ÍĞÑ½­•¸õÉ…¹‘½µQ½­•¸ ¤±Ñ½­•¹!…Í õ…İ…¥ĞÍ¡„ÈÔÙ!•à¡Ñ½­•¸¤±¥õÉåÁÑ¼¹É…¹‘½µUU% ¤±Á¥¹!…Í õ¥¹ÁÕĞ¹Á¥¸ı…İ…¥ĞÍ¡„ÈÔÙ!•à¡Ñ½­•¹!…Í ¬œèœ­¥¹ÁÕĞ¹Á¥¸¤é¹Õ±°ì(€…İ…¥Ğ•¹Ø¹¹ÁÉ•Á…É” %9MIP%9Q<…•ÍÍ}É…¹ÑÌ¡¥±ÁÉ½©•Ñ}¥±±…‰•°±Ñ½­•¹}¡…Í ±Á¥¹}¡…Í ±Á•Éµ¥ÍÍ¥½¸±•áÁ¥É•Í}…Ğ±µ…á}ÕÍ•Ì±É•…Ñ•‘}‰ä¤Y1UL üÄ°üÈ°üÌ°üĞ°üÔ°üØ°üÜ°üà°üä¤œ¤(€€€€¹‰¥¹¡¥±¥¹ÁÕĞ¹ÁÉ½©•Ñ%±¥¹ÁÕĞ¹±…‰•°ü¹ÑÉ¥´ ¥ññ¹Õ±°±Ñ½­•¹!…Í ±Á¥¹!…Í ±¥¹ÁÕĞ¹Á•Éµ¥ÍÍ¥½¹ñğÙ¥•Üœ±¥¹ÁÕĞ¹•áÁ¥É•ÍÑññ¹Õ±°±¥¹ÁÕĞ¹µ…áUÍ•Íññ¹Õ±°±…Ñ½È¹ÕÍ•É%¤¹ÉÕ¸ ¤ì(€…İ…¥Ğ…Õ‘¥Ğ¡•¹Ø±íÉ•ÅÕ•ÍÑ%éÉ¥±…Ñ½ÉQåÁ”è…‘µ¥¸œ±…Ñ½É%é…Ñ½È¹ÕÍ•É%±…Ñ¥½¸èÉ…¹Ğ¹É•…Ñ•œ±Ñ…É•ÑQåÁ”è…•ÍÍ}É…¹Ğœ±Ñ…É•Ñ%é¥‘ô¤ì(€É•ÑÕÉ¸©Í½¸¡íÉ…¹Ğéí¥±ÁÉ½©•Ñ%é¥¹ÁÕĞ¹ÁÉ½©•Ñ%±Á¥¹I•ÅÕ¥É•è„…¥¹ÁÕĞ¹Á¥¸±Á•Éµ¥ÍÍ¥½¸é¥¹ÁÕĞ¹Á•Éµ¥ÍÍ¥½¹ñğÙ¥•Üô±ÕÉ°é€‘í•¹Ø¹AU	1%}=I%%9ô½Í¡…É”¼‘íÑ½­•¹õô°ÈÀÄ¤ì)ô()…Íå¹Œ™Õ¹Ñ¥½¸É…¹ÑÉ½µQ½­•¸¡•¹Øé¹Ø±Ñ½­•¸éÍÑÉ¥¹œ¥íÉ•ÑÕÉ¸•¹Ø¹¹ÁÉ•Á…É”¡M1Pœ¹¥±œ¹ÁÉ½©•Ñ}¥±œ¹Á¥¹}¡…Í ±œ¹Á•Éµ¥ÍÍ¥½¸±œ¹•áÁ¥É•Í}…Ğ±œ¹µ…á}ÕÍ•Ì±œ¹ÕÍ•}½Õ¹Ğ±À¹¹…µ”ÁÉ½©•Ñ}¹…µ”(€I=4…•ÍÍ}É…¹ÑÌœ)=%8ÁÉ½©•ÑÌÀ=8À¹¥õœ¹ÁÉ½©•Ñ}¥]!Iœ¹Ñ½­•¹}¡…Í ôüÄ9œ¹É•Ù½­•‘}…Ğ%L9U109€¡œ¹•áÁ¥É•Í}…Ğ%L9U10=Hœ¹•áÁ¥É•Í}…ĞùUII9Q}Q%5MQ5@¤(€9€¡œ¹µ…á}ÕÍ•Ì%L9U10=Hœ¹ÕÍ•}½Õ¹Ğñœ¹µ…á}ÕÍ•Ì¤9À¹ÍÑ…ÑÕÌôÁÕ‰±¥Í¡•€¤¹‰¥¹¡…İ…¥ĞÍ¡„ÈÔÙ!•à¡Ñ½­•¸¤¤¹™¥ÉÍĞñ…¹äø ¥ô()•áÁ½ÉĞ™Õ¹Ñ¥½¸Í¡…É•A…”¡Ñ½­•¸éÍÑÉ¥¹œ¤éI•ÍÁ½¹Í•ì(€½¹ÍĞ¹½¹”õÉ…¹‘½µQ½­•¸ ÄÈ¤±µ…É­ÕÀõ€ğ…‘½ÑåÁ”¡Ñµ°øñ¡Ñµ°±…¹œô‰ÁĞµ	Hˆøñ¡•…øñµ•Ñ„¡…ÉÍ•Ğô‰ÕÑ˜´àˆøñµ•Ñ„¹…µ”ô‰Ù¥•İÁ½ÉĞˆ½¹Ñ•¹Ğô‰İ¥‘Ñ õ‘•Ù¥”µİ¥‘Ñ ˆøñÑ¥Ñ±”ù¹ÑÉ•„A)(ğ½Ñ¥Ñ±”øñÍÑå±”¹½¹”ôˆ‘í¹½¹•ôˆù‰½‘åíµ…É¥¸èÀíµ¥¸µ¡•¥¡ĞèÄÀÁÙ í‘¥ÍÁ±…äéÉ¥íÁ±…”µ¥Ñ•µÌé•¹Ñ•Èí‰…­É½Õ¹èŒÄØÍ˜ÌĞí™½¹ĞèÄÕÁàÍåÍÑ•´µÕ¤í½±½ÈèŒÄÜÈØÈÁô¹‰½áíİ¥‘Ñ éµ¥¸ ØÔÁÁà°äÈ”¤í‰…­É½Õ¹è™™˜íÁ…‘‘¥¹œèÌÉÁàí‰½É‘•ÈµÉ…‘¥ÕÌèÈÁÁáõ¥¹ÁÕĞ±‰ÕÑÑ½¹íİ¥‘Ñ èÄÀÀ”íÁ…‘‘¥¹œèÄÉÁàíµ…É¥¸µÑ½ÀèÄÁÁàí‰½É‘•ÈµÉ…‘¥ÕÌèåÁàí‰½É‘•ÈèÅÁàÍ½±¥€ÕÁõ‰ÕÑÑ½¹í‰…­É½Õ¹èŒÄØÍ˜ÌĞí½±½Èéİ¡¥Ñ”í™½¹Ğµİ•¥¡ĞèÜÀÁô¥Ñ•µÍí‘¥ÍÁ±…äéÉ¥í…ÀèáÁáõ…íÁ…‘‘¥¹œèÄÉÁàí‰…­É½Õ¹è••˜É•í½±½ÈèŒÄÜÍ˜ÌÔí‰½É‘•ÈµÉ…‘¥ÕÌèáÁàí™½¹Ğµİ•¥¡ĞèÜÀÁôğ½ÍÑå±”øğ½¡•…øñ‰½‘äøñµ…¥¸±…ÍÌô‰‰½àˆøñ Äù¹ÑÉ•„ÁÉ¥Ù…‘„ğ½ Äøñ™½É´¥ô‰…•ÍÌˆøñ±…‰•°ùA%8°Í”Í½±¥¥Ñ…‘¼ğ½±…‰•°øñ¥¹ÁÕĞ¥ô‰Á¥¸ˆ¥¹ÁÕÑµ½‘”ô‰¹Õµ•É¥Œˆ…ÕÑ½½µÁ±•Ñ”ô‰½¹”µÑ¥µ”µ½‘”ˆøñ‰ÕÑÑ½¸ù•ÍÍ…Èğ½‰ÕÑÑ½¸øñÀ¥ô‰µ•ÍÍ…”ˆøğ½Àøğ½™½É´øñÍ•Ñ¥½¸¥ô‰ÁÉ½©•Ğˆ¡¥‘‘•¸øñ È¥ô‰¹…µ”ˆøğ½ Èøñ‘¥Ø¥ô‰¥Ñ•µÌˆøğ½‘¥Øøğ½Í•Ñ¥½¸øğ½µ…¥¸øñÍÉ¥ÁĞ¹½¹”ôˆ‘í¹½¹•ôˆù½¹ÍĞÑ½­•¸ô‘í)M=8¹ÍÑÉ¥¹¥™ä¡Ñ½­•¸¥ô±˜õ‘½Õµ•¹Ğ¹ÅÕ•ÉåM•±•Ñ½È œ…•ÍÌœ¤±´õ‘½Õµ•¹Ğ¹ÅÕ•ÉåM•±•Ñ½È œµ•ÍÍ…”œ¤í˜¹½¹ÍÕ‰µ¥Ğõ…Íå¹Œ”ôùí”¹ÁÉ•Ù•¹Ñ•™…Õ±Ğ ¤í½¹ÍĞÈõ…İ…¥Ğ™•Ñ  œ½…Á¤½Í¡…É”½…ÕÑ œ±íµ•Ñ¡½èA=MPœ±¡•…‘•ÉÌéì½¹Ñ•¹ĞµÑåÁ”œè…ÁÁ±¥…Ñ¥½¸½©Í½¸ô±‰½‘äé)M=8¹ÍÑÉ¥¹¥™ä¡íÑ½­•¸±Á¥¸é‘½Õµ•¹Ğ¹ÅÕ•ÉåM•±•Ñ½È œÁ¥¸œ¤¹Ù…±Õ•ô¥ô¤±õ…İ…¥ĞÈ¹©Í½¸ ¤í¥˜ …È¹½¬¥í´¹Ñ•áÑ½¹Ñ•¹Ğõ¹•ÉÉ½Èü¹µ•ÍÍ…•ñğ•ÍÍ¼¹•…‘¼œíÉ•ÑÕÉ¹õ˜¹¡¥‘‘•¸õÑÉÕ”í±½… ¥ôí…Íå¹Œ™Õ¹Ñ¥½¸±½… ¥í½¹ÍĞÈõ…İ…¥Ğ™•Ñ  œ½…Á¤½Í¡…É”½ÁÉ½©•Ğœ¤±õ…İ…¥ĞÈ¹©Í½¸ ¤í¥˜ …È¹½¬¥í´¹Ñ•áÑ½¹Ñ•¹Ğõ¹•ÉÉ½Èü¹µ•ÍÍ…”íÉ•ÑÕÉ¹õ‘½Õµ•¹Ğ¹ÅÕ•ÉåM•±•Ñ½È œÁÉ½©•Ğœ¤¹¡¥‘‘•¸õ™…±Í”í‘½Õµ•¹Ğ¹ÅÕ•ÉåM•±•Ñ½È œ¹…µ”œ¤¹Ñ•áÑ½¹Ñ•¹Ğõ¹ÁÉ½©•Ğ¹¹…µ”í½¹ÍĞ¡½ÍĞõ‘½Õµ•¹Ğ¹ÅÕ•ÉåM•±•Ñ½È œ¥Ñ•µÌœ¤í¡½ÍĞ¹É•Á±…•¡¥±‘É•¸ ¤í¥˜ …¹…ÍÍ•ÑÌ¹±•¹Ñ ¥í¡½ÍĞ¹Ñ•áÑ½¹Ñ•¹Ğô9•¹¡Õ´ÁÉ½‘ÕÑ¼ÁÕ‰±¥…‘¼¸œíÉ•ÑÕÉ¹õ™½È¡½¹ÍĞ…ÍÍ•Ğ½˜¹…ÍÍ•ÑÌ¥í½¹ÍĞ±¥¹¬õ‘½Õµ•¹Ğ¹É•…Ñ•±•µ•¹Ğ „œ¤í±¥¹¬¹Ñ…É•Ğô}‰±…¹¬œí±¥¹¬¹É•°ô¹½½Á•¹•Èœí±¥¹¬¹¡É•˜ôœ½…Á¤½Í¡…É”½…ÍÍ•ÑÌ¼œ­•¹½‘•UI%½µÁ½¹•¹Ğ¡…ÍÍ•Ğ¹¥¤¬œ½½¹Ñ•¹Ğœí±¥¹¬¹Ñ•áÑ½¹Ñ•¹Ğô¡¹Á•Éµ¥ÍÍ¥½¸ôôô‘½İ¹±½…œü	…¥á…È€œèY¥ÍÕ…±¥é…È€œ¤­MÑÉ¥¹œ¡…ÍÍ•Ğ¹Ñ¥Ñ±•ñğÉÅÕ¥Ù¼œ¤í¡½ÍĞ¹…ÁÁ•¹¡±¥¹¬¥õôğ½ÍÉ¥ÁĞøğ½‰½‘çnı¶‰Ëkºwµç[ÚÙ[Ÿ	ÉÊNÚYŠYÜ˜[
-\™]\›ˆ\œ›ÜŠË	ÙÜ˜[Ù[šYY	Ë	Ó[šÈ[°è[YË^\˜YÈİH\ÙÛİYË‰ËšY
-NÂˆYŠÜ˜[œ[—Ú\Ú
-^ØÛÛœİİ\YYX]ØZ]ÚLM’^
-ÚÙ[’\Ú
-ÉÎ‰ÊÊ[œ]œ[Ÿ	ÉÊJNÚYŠX]ØZ]ÛÛœİ[[YQ\]X[
-İ\YYÜ˜[œ[—Ú\Ú
-J^Âˆ]ØZ][‹‘‹œ™\\™JS”ÑT•S•È˜]WÛ[Z]ÊÙ^KÚ[™İ×Üİ\YØ]][\Ë›ØÚÙYİ[[
-HSQTÊÌKÕT”‘S•ÕSQTÕSTK•S
-BˆÓˆÓÓ‘“PÕ
-Ù^JHÈTUHÑU][\ÏPĞTÑHÒSˆÚ[™İ×Üİ\YØ]]][YJ	Û›İÉË	ËLMHZ[]\ÉÊHSˆHSÑH][\ÊÌHS‘ˆÚ[™İ×Üİ\YØ]PĞTÑHÒSˆÚ[™İ×Üİ\YØ]]][YJ	Û›İÉË	ËLMHZ[]\ÉÊHSˆÕT”‘S•ÕSQTÕSTSÑHÚ[™İ×Üİ\YØ]S‘ˆ›ØÚÙYİ[[PĞTÑHÒSˆ][\ÏMÈSˆ]][YJ	Û›İÉË	ÊÌÌZ[]\ÉÊHSÑH›ØÚÙYİ[[S‘\]YØ]PÕT”‘S•ÕSQTÕST
-K˜š[™
-˜]RÙ^JKœ[Š
-NÂˆ]ØZ]]Y]
-[‹Ü™\]Y\İYœšYXİÜ•\N‰ÙÜ˜[	ËXİÜ’Y™Ü˜[šYXİ[Û‰ÙÜ˜[œ[—Ù[šYY	Ë\™Ù]\N‰ØXØÙ\Ü×ÙÜ˜[	Ë\™Ù]Y™Ü˜[šYİ]ÛÛYN‰Ù[šYY	Ë\\ÚJNÂˆ™]\›ˆ\œ›ÜŠË	Ú[˜[YÜ[‰Ë	ÔSˆ[°è[YË‰ËšY
-Bˆ_Bˆ]ØZ][‹‘‹œ™\\™J	ÑSUH”“ÓH˜]WÛ[Z]ÈÒT‘HÙ^OOÌIÊK˜š[™
-˜]RÙ^JKœ[Š
-NÂˆÛÛœİÙ\ÜÚ[Û\˜[™ÛUÚÙ[Š
-NØ]ØZ][‹‘‹˜˜]Ú
-Ù[‹‘‹œ™\\™J’S”ÑT•S•ÈÙ\ÜÚ[ÛœÊYÜ˜[ÚYÚÙ[—Ú\ÚÜÜ™—Ú\Ú^\™\×Ø]YWÙ^\™\×Ø]
-HSQTÊÌKÌ‹ÌËÍ]][YJ	Û›İÉË	ÊÌİ\œÉÊK]][YJ	Û›İÉË	ÊÌÌZ[]\ÉÊJHŠK˜š[™
-Ü\Ëœ˜[™ÛUURQ
+import type { Env } from './env';
+import type { Principal } from './auth';
+import { audit } from './audit';
+import { constantTimeEqual, randomToken, sha256Hex } from './crypto';
+import { streamFile } from './drive';
+import { error, html, json, parseCookie, readJson, safeInlineMime } from './http';
 
-KÜ˜[šY]ØZ]ÚLM’^
-Ù\ÜÚ[ÛŠK]ØZ]ÚLM’^
-˜[™ÛUÚÙ[Š
-JJK[‹‘‹œ™\\™J	ÕTUHXØÙ\Ü×ÙÜ˜[ÈÑU\ÙWØÛİ[]\ÙWØÛİ[
-ÌHÒT‘HYOÌIÊK˜š[™
-Ü˜[šY
-WJNÂˆ]ØZ]]Y]
-[‹Ü™\]Y\İYœšYXİÜ•\N‰ÙÜ˜[	ËXİÜ’Y™Ü˜[šYXİ[Û‰ÙÜ˜[˜]][XØ]Y	Ë\™Ù]\N‰ØXØÙ\Ü×ÙÜ˜[	Ë\™Ù]Y™Ü˜[šY\\ÚJNÂˆ™]\›ˆœÛÛŠØ]][XØ]YY_KŒÉÜÙ]XÛÛÚÚYIÎ˜ÛÛÚÚYJÙ\ÜÚ[ÛŠ_JNÂŸB‚˜\Ş[˜È[˜İ[ÛˆÜ˜[Ù\ÜÚ[ÛŠ™\]Y\İ”™\]Y\İ[‘[Š^ØÛÛœİÚÙ[\\œÙPÛÛÚÚYJ™\]Y\İ	Üš—ÜÚ\™IÊNÚYŠ]ÚÙ[Š\™]\›ˆ[ØÛÛœİ›İÏX]ØZ][‹‘‹œ™\\™JÑSPÕËšYÙ\ÜÚ[Û—ÚYËšYËœ›Ú™XİÚYËœ\›Z\ÜÚ[Û‹›˜[YH›Ú™XİÛ˜[YH”“ÓHÙ\ÜÚ[ÛœÈÈ“ÒSˆXØÙ\Ü×ÙÜ˜[ÈÈÓˆËšY\Ë™Ü˜[ÚY“ÒSˆ›Ú™XİÈÓˆšYYËœ›Ú™XİÚYˆÒT‘HËÚÙ[—Ú\ÚOÌHS‘Ëœ™]›ÚÙYØ]TÈ•SS‘Ë™^\™\×Ø]ÕT”‘S•ÕSQTÕSTS‘ËšYWÙ^\™\×Ø]ÕT”‘S•ÕSQTÕSTS‘Ëœ™]›ÚÙYØ]TÈ•SS‘
-Ë™^\™\×Ø]TÈ•SÔˆË™^\™\×Ø]ÕT”‘S•ÕSQTÕST
-HS‘œİ]\ÏIÜX›\ÚY	Ø
-K˜š[™
-]ØZ]ÚLM’^
-ÚÙ[ŠJK™š\œİ[OŠ
-NÚYŠ›İÊX]ØZ][‹‘‹œ™\\™J•TUHÙ\ÜÚ[ÛœÈÑU\İÜÙY[—Ø]PÕT”‘S•ÕSQTÕSTYWÙ^\™\×Ø]Y]][YJ	Û›İÉË	ÊÌÌZ[]\ÉÊHÒT‘HYOÌHŠK˜š[™
-›İËœÙ\ÜÚ[Û—ÚY
-Kœ[Š
-NÜ™]\›ˆ›İßB‚™^Ü\Ş[˜È[˜İ[ÛˆÚ\™Y›Ú™Xİ
-™\]Y\İ”™\]Y\İ[‘[‹šYœİš[™ÊN”›ÛZ\ÙO™\ÜÛœÙOØÛÛœİÏX]ØZ]Ü˜[Ù\ÜÚ[ÛŠ™\]Y\İ[ŠNÚYŠYÊ\™]\›ˆ\œ›ÜŠK	ÜÚ\™WØ]]Ü™\]Z\™Y	Ë	ĞXÙ\ÜÛÈ^\˜YË‰ËšY
-NØÛÛœİ\ÜÙ]ÏX]ØZ][‹‘‹œ™\\™J”ÑSPÕY]K\Kİ]\È”“ÓH\ÜÙ]ÈÒT‘H›Ú™XİÚYOÌHS‘İ]\ÏIÜX›\ÚY	ÈÔ‘Tˆ–HÜ™X]YØ]TĞÈŠK˜š[™
-Ëœ›Ú™XİÚY
-K˜[
+const cookie=(v:string,max=86400)=>`pjj_share=${encodeURIComponent(v)}; Path=/api/share; HttpOnly; Secure; SameSite=Strict; Max-Age=${max}`;
 
-NÜ™]\›ˆœÛÛŠÜ›Ú™XİÚY™Ëœ›Ú™XİÚY˜[YN™Ëœ›Ú™XİÛ˜[Y_K\ÜÙ]Î˜\ÜÙ]Ëœ™\İ[Ë\›Z\ÜÚ[Û™Ëœ\›Z\ÜÚ[ÛŸJ_B™^Ü\Ş[˜È[˜İ[ÛˆÚ\™Y\ÜÙ]
-™\]Y\İ”™\]Y\İ[‘[‹\ÜÙ]Yœİš[™ËšYœİš[™ÊN”›ÛZ\ÙO™\ÜÛœÙOØÛÛœİÏX]ØZ]Ü˜[Ù\ÜÚ[ÛŠ™\]Y\İ[ŠNÚYŠYÊ\™]\›ˆ\œ›ÜŠK	ÜÚ\™WØ]]Ü™\]Z\™Y	Ë	ĞXÙ\ÜÛÈ^\˜YË‰ËšY
-NØÛÛœİOX]ØZ][‹‘‹œ™\\™J”ÑSPÕÜšYÚ[˜[Ùš]™WÙš[WÚYÜšYÚ[˜[Û˜[YKZ[YWİ\KİÛ›ØYX›H”“ÓH\ÜÙ]ÈÒT‘HYOÌHS‘›Ú™XİÚYOÌˆS‘İ]\ÏIÜX›\ÚY	ÈŠK˜š[™
-\ÜÙ]YËœ›Ú™XİÚY
-K™š\œİ[OŠ
-NÚYŠX_XK›ÜšYÚ[˜[Ùš]™WÙš[WÚY
-\™]\›ˆ\œ›ÜŠ	Ø\ÜÙ]Û›İÙ›İ[™	Ë	Ğ\œ]Z]›È°èÛÈ[˜ÛÛ˜YË‰ËšY
-NØÛÛœİZ[YOXK›Z[YWİ\_	Ø\XØ][Û‹ÛØİ]\İ™X[IËİÛ›ØYYËœ\›Z\ÜÚ[ÛOOIÙİÛ›ØY	É‰˜K™İÛ›ØYX›K[›[™OHYİÛ›ØY	‰œØY™R[›[™SZ[YJZ[YJNØÛÛœİ\İ™X[OX]ØZ]İ™X[Qš[J[‹K›ÜšYÚ[˜[Ùš]™WÙš[WÚY™\]Y\İšXY\œË™Ù]
-	Ü˜[™ÙIÊJNÚYŠ]\İ™X[K›ÚÉ‰\İ™X[Kœİ]\ÈOOLŒŠ\™]\›ˆ\œ›ÜŠL‹	Ùš]™WÜİ™X[WÙ˜Z[Y	Ë	Ñ˜[H˜H˜[œÛZ\ÜğèÛË‰ËšY
-NØÛÛœİ[™]ÈXY\œÊÉØÛÛ[]\IÎ›Z[YK	ØØXÚKXÛÛ›Û	Î‰Üš]˜]K›Ë\İÜ™IË	ØXØÙ\\˜[™Ù\ÉÎ‰Ø]\ÉË	ØÛÛ[Y\ÜÜÚ][Û‰Î˜	Ú[›[™OÉÚ[›[™IÎ‰Ø]XÚY[	ßNÈš[[˜[YJUU‹N	ÉÉÙ[˜ÛÙUT’PÛÛ\Û™[
-K›ÜšYÚ[˜[Û˜[YJ_X	ØÛÛ[\ÙXİ\š]K\ÛXŞIÎˆœØ[™›ŞÈY˜][\Ü˜È	Û›Û™IÈ‹	ŞXÛÛ[]\K[Ü[ÛœÉÎ‰Û›ÜÛšY™‰ßJNÙ›ÜŠÛÛœİÈÙˆÉØÛÛ[[[™İ	Ë	ØÛÛ[\˜[™ÙIË	Ù]YÉË	Û\İ[[ÙYšYY	×J^ØÛÛœİ]\İ™X[KšXY\œË™Ù]
-ÊNÚYŠŠZœÙ]
-ËŠ_X]ØZ]]Y]
-[‹Ü™\]Y\İYœšYXİÜ•\N‰ÙÜ˜[	ËXİÜ’Y™ËšYXİ[Û™İÛ›ØYÉØ\ÜÙ]™İÛ›ØYY	Î‰Ø\ÜÙ]šY]ÙY	Ë\™Ù]\N‰Ø\ÜÙ]	Ë\™Ù]Y˜\ÜÙ]YJNÜ™]\›ˆ™]È™\ÜÛœÙJ\İ™X[K˜›ÙKÜİ]\Î\İ™X[Kœİ]\ËXY\œÎšJ_B
+export async function createGrant(request:Request,env:Env,actor:Principal,rid:string):Promise<Response>{
+  let input:{projectId:string;label?:string;pin?:string;expiresAt?:string;maxUses?:number;permission?:'view'|'download'};try{input=await readJson(request)}catch{return error(400,'invalid_json','Dados invÃ¡lidos.',rid)}
+  const project=await env.DB.prepare("SELECT id FROM projects WHERE id=?1 AND status!='trashed'").bind(input.projectId).first();if(!project)return error(404,'project_not_found','Projeto nÃ£o encontrado.',rid);
+  if(input.pin&&!/^\d{4,10}$/.test(input.pin))return error(400,'invalid_pin','Use um PIN de 4 a 10 dÃ­gitos.',rid);
+  const token=randomToken(),tokenHash=await sha256Hex(token),id=crypto.randomUUID(),pinHash=input.pin?await sha256Hex(tokenHash+':'+input.pin):null;
+  await env.DB.prepare('INSERT INTO access_grants(id,project_id,label,token_hash,pin_hash,permission,expires_at,max_uses,created_by) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9)')
+    .bind(id,input.projectId,input.label?.trim()||null,tokenHash,pinHash,input.permission||'view',input.expiresAt||null,input.maxUses||null,actor.userId).run();
+  await audit(env,{requestId:rid,actorType:'admin',actorId:actor.userId,action:'grant.created',targetType:'access_grant',targetId:id});
+  return json({grant:{id,projectId:input.projectId,pinRequired:!!input.pin,permission:input.permission||'view'},url:`${env.PUBLIC_ORIGIN}/share/${token}`},201);
+}
+
+async function grantFromToken(env:Env,token:string){return env.DB.prepare(`SELECT g.id,g.project_id,g.pin_hash,g.permission,g.expires_at,g.max_uses,g.use_count,p.name project_name
+  FROM access_grants g JOIN projects p ON p.id=g.project_id WHERE g.token_hash=?1 AND g.revoked_at IS NULL AND (g.expires_at IS NULL OR g.expires_at>CURRENT_TIMESTAMP)
+  AND (g.max_uses IS NULL OR g.use_count<g.max_uses) AND p.status='published'`).bind(await sha256Hex(token)).first<any>()}
+
+export function sharePage(token:string):Response{
+  const nonce=randomToken(12),markup=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Entrega PJJ</title><style nonce="${nonce}">body{margin:0;min-height:100vh;display:grid;place-items:center;background:#163f34;font:15px system-ui;color:#172620}.box{width:min(650px,92%);background:#fff;padding:32px;border-radius:20px}input,button{width:100%;padding:12px;margin-top:10px;border-radius:9px;border:1px solid #ccd5d0}button{background:#163f34;color:white;font-weight:700}#items{display:grid;gap:8px}a{padding:12px;background:#eef2ed;color:#173f35;border-radius:8px;font-weight:700}</style></head><body><main class="box"><h1>Entrega privada</h1><form id="access"><label>PIN, se solicitado</label><input id="pin" inputmode="numeric" autocomplete="one-time-code"><button>Acessar</button><p id="message"></p></form><section id="project" hidden><h2 id="name"></h2><div id="items"></div></section></main><script nonce="${nonce}">const token=${JSON.stringify(token)},f=document.querySelector('#access'),m=document.querySelector('#message');f.onsubmit=async e=>{e.preventDefault();const r=await fetch('/api/share/auth',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token,pin:document.querySelector('#pin').value})}),d=await r.json();if(!r.ok){m.textContent=d.error?.message||'Acesso negado';return}f.hidden=true;load()};async function load(){const r=await fetch('/api/share/project'),d=await r.json();if(!r.ok){m.textContent=d.error?.message;return}document.querySelector('#project').hidden=false;document.querySelector('#name').textContent=d.project.name;const host=document.querySelector('#items');host.replaceChildren();if(!d.assets.length){host.textContent='Nenhum produto publicado.';return}for(const asset of d.assets){const link=document.createElement('a');link.target='_blank';link.rel='noopener';link.href='/api/share/assets/'+encodeURIComponent(asset.id)+'/content';link.textContent=(d.permission==='download'?'Baixar ':'Visualizar ')+String(asset.title||'Arquivo');host.append(link)}}</script></body></html>`;return html(markup,nonce)
+}
+
+export async function authenticateGrant(request:Request,env:Env,rid:string):Promise<Response>{
+  let input:{token:string;pin?:string};try{input=await readJson(request)}catch{return error(400,'invalid_json','Dados invÃ¡lidos.',rid)}
+  const ipHash=await sha256Hex(request.headers.get('cf-connecting-ip')||'unknown'),tokenHash=await sha256Hex(input.token||''),rateKey=`share:${ipHash}:${tokenHash.slice(0,16)}`;
+  const rate=await env.DB.prepare('SELECT attempts,blocked_until FROM rate_limits WHERE key=?1').bind(rateKey).first<{attempts:number;blocked_until:string|null}>();
+  if(rate?.blocked_until&&new Date(rate.blocked_until).getTime()>Date.now())return error(429,'temporarily_blocked','Muitas tentativas. Aguarde antes de tentar novamente.',rid);
+  const grant=await grantFromToken(env,input.token||'');if(!grant)return error(403,'grant_denied','Link invÃ¡lido, expirado ou esgotado.',rid);
+  if(grant.pin_hash){const supplied=await sha256Hex(tokenHash+':'+(input.pin||''));if(!await constantTimeEqual(supplied,grant.pin_hash)){
+    await env.DB.prepare(`INSERT INTO rate_limits(key,window_started_at,attempts,blocked_until) VALUES(?1,CURRENT_TIMESTAMP,1,NULL)
+      ON CONFLICT(key) DO UPDATE SET attempts=CASE WHEN window_started_at<datetime('now','-15 minutes') THEN 1 ELSE attempts+1 END,
+      window_started_at=CASE WHEN window_started_at<datetime('now','-15 minutes') THEN CURRENT_TIMESTAMP ELSE window_started_at END,
+      blocked_until=CASE WHEN attempts>=7 THEN datetime('now','+30 minutes') ELSE blocked_until END,updated_at=CURRENT_TIMESTAMP`).bind(rateKey).run();
+    await audit(env,{requestId:rid,actorType:'grant',actorId:grant.id,action:'grant.pin_denied',targetType:'access_grant',targetId:grant.id,outcome:'denied',ipHash});
+    return error(403,'invalid_pin','PIN invÃ¡lido.',rid)
+  }}
+  await env.DB.prepare('DELETE FROM rate_limits WHERE key=?1').bind(rateKey).run();
+  const session=randomToken();await env.DB.batch([env.DB.prepare("INSERT INTO sessions(id,grant_id,token_hash,csrf_hash,expires_at,idle_expires_at) VALUES(?1,?2,?3,?4,datetime('now','+24 hours'),datetime('now','+30 minutes'))").bind(crypto.randomUUID(),grant.id,await sha256Hex(session),await sha256Hex(randomToken())),env.DB.prepare('UPDATE access_grants SET use_count=use_count+1 WHERE id=?1').bind(grant.id)]);
+  await audit(env,{requestId:rid,actorType:'grant',actorId:grant.id,action:'grant.authenticated',targetType:'access_grant',targetId:grant.id,ipHash});
+  return json({authenticated:true},200,{'set-cookie':cookie(session)});
+}
+
+async function grantSession(request:Request,env:Env){const token=parseCookie(request,'pjj_share');if(!token)return null;const row=await env.DB.prepare(`SELECT s.id session_id,g.id,g.project_id,g.permission,p.name project_name FROM sessions s JOIN access_grants g ON g.id=s.grant_id JOIN projects p ON p.id=g.project_id
+ WHERE s.token_hash=?1 AND s.revoked_at IS NULL AND s.expires_at>CURRENT_TIMESTAMP AND s.idle_expires_at>CURRENT_TIMESTAMP AND g.revoked_at IS NULL AND (g.expires_at IS NULL OR g.expires_at>CURRENT_TIMESTAMP) AND p.status='published'`).bind(await sha256Hex(token)).first<any>();if(row)await env.DB.prepare("UPDATE sessions SET last_seen_at=CURRENT_TIMESTAMP,idle_expires_at=datetime('now','+30 minutes') WHERE id=?1").bind(row.session_id).run();return row}
+
+export async function sharedProject(request:Request,env:Env,rid:string):Promise<Response>{const g=await grantSession(request,env);if(!g)return error(401,'share_auth_required','Acesso expirado.',rid);const assets=await env.DB.prepare("SELECT id,title,type,status FROM assets WHERE project_id=?1 AND status='published' ORDER BY created_at DESC").bind(g.project_id).all();return json({project:{id:g.project_id,name:g.project_name},assets:assets.results,permission:g.permission})}
+export async function sharedAsset(request:Request,env:Env,assetId:string,rid:string):Promise<Response>{const g=await grantSession(request,env);if(!g)return error(401,'share_auth_required','Acesso expirado.',rid);const a=await env.DB.prepare("SELECT original_drive_file_id,original_name,mime_type,downloadable FROM assets WHERE id=?1 AND project_id=?2 AND status='published'").bind(assetId,g.project_id).first<any>();if(!a||!a.original_drive_file_id)return error(404,'asset_not_found','Arquivo nÃ£o encontrado.',rid);const mime=a.mime_type||'application/octet-stream',download=g.permission==='download'&&a.downloadable,inline=!download&&safeInlineMime(mime);const upstream=await streamFile(env,a.original_drive_file_id,request.headers.get('range'));if(!upstream.ok&&upstream.status!==206)return error(502,'drive_stream_failed','Falha na transmissÃ£o.',rid);const h=new Headers({'content-type':mime,'cache-control':'private, no-store','accept-ranges':'bytes','content-disposition':`${inline?'inline':'attachment'}; filename*=UTF-8''${encodeURIComponent(a.original_name)}`,'content-security-policy':"sandbox; default-src 'none'",'x-content-type-options':'nosniff'});for(const k of ['content-length','content-range','etag','last-modified']){const v=upstream.headers.get(k);if(v)h.set(k,v)}await audit(env,{requestId:rid,actorType:'grant',actorId:g.id,action:download?'asset.downloaded':'asset.viewed',targetType:'asset',targetId:assetId});return new Response(upstream.body,{status:upstream.status,headers:h})}
