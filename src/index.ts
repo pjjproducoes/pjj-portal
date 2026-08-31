@@ -1,7 +1,7 @@
 import type { Env } from './env';
 import { audit } from './audit';
 import { principal, createSession, validCsrf } from './auth';
-import { constantTimeEqual, sha256Hex } from './crypto';
+import { constantTimeEqual, randomToken, sha256Hex } from './crypto';
 import { clearSessionCookie, error, json, readJson, requestId, sessionCookie } from './http';
 import { hashPassword, verifyPassword } from './password';
 import { cancelUpload, putChunk, startUpload, uploadStatus } from './uploads';
@@ -17,6 +17,7 @@ import { authenticateGrant, createGrant, sharePage, sharedAsset, sharedProject }
 import { internalRoute } from './internal';
 import { adminOverview, listAccess, listAudit, restoreEntity, revokeAccess, updateEntity } from './admin-ops';
 import { comparisonPage } from './compare';
+import { operationsUi } from './ops-ui';
 
 function route(path: string, pattern: RegExp): RegExpMatchArray | null {
   return path.match(pattern);
@@ -97,7 +98,8 @@ async function login(request: Request, env: Env, rid: string): Promise<Response>
 async function authenticated(request: Request, env: Env, rid: string): Promise<{ actor: NonNullable<Awaited<ReturnType<typeof principal>>> } | Response> {
   const actor = await principal(env, request);
   if (!actor) return error(401, 'authentication_required', 'Faça login para continuar.', rid);
-  if (!['GET','HEAD','OPTIONS'].includes(request.method) && !await validCsrf(request, actor)) {
+  const sameOrigin = request.headers.get('sec-fetch-site') === 'same-origin' && request.headers.get('origin') === new URL(env.PUBLIC_ORIGIN).origin;
+  if (!['GET','HEAD','OPTIONS'].includes(request.method) && !sameOrigin && !await validCsrf(request, actor)) {
     return error(403, 'invalid_csrf', 'A sessão não confirmou esta operação.', rid);
   }
   return { actor };
@@ -110,6 +112,7 @@ export default {
     try {
       if (request.method === 'GET' && url.pathname === '/') return institutional();
       if (request.method === 'GET' && (url.pathname === '/admin' || url.pathname === '/admin/')) return adminUi();
+      if (request.method === 'GET' && url.pathname === '/admin/operations') return operationsUi();
       if (request.method === 'GET' && (url.pathname === '/portal' || url.pathname === '/portal/')) return portalUi();
       const invitePage = route(url.pathname, /^\/invite\/([A-Za-z0-9_-]{40,64})$/);
       if (invitePage?.[1] && request.method === 'GET') return invitationUi(invitePage[1]);
@@ -138,7 +141,9 @@ export default {
 
       if (request.method === 'GET' && url.pathname === '/api/auth/me') {
         const user = await env.DB.prepare('SELECT id,email,display_name,role FROM users WHERE id=?1').bind(actor.userId).first();
-        return json({ user });
+        const csrfToken=randomToken();
+        await env.DB.prepare('UPDATE sessions SET csrf_hash=?1 WHERE id=?2').bind(await sha256Hex(csrfToken),actor.sessionId).run();
+        return json({ user, csrfToken });
       }
       if (request.method === 'POST' && url.pathname === '/api/auth/logout') {
         await env.DB.prepare('UPDATE sessions SET revoked_at=CURRENT_TIMESTAMP WHERE id=?1').bind(actor.sessionId).run();
