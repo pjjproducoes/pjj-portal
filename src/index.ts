@@ -16,6 +16,7 @@ import { viewerPage } from './viewers';
 import { authenticateGrant, createGrant, sharePage, sharedAsset, sharedProject } from './share';
 import { internalRoute } from './internal';
 import { adminOverview, listAccess, listAudit, restoreEntity, revokeAccess, updateEntity } from './admin-ops';
+import { reviewPage } from './review';
 import { comparisonPage } from './compare';
 import { operationsUi } from './ops-ui';
 
@@ -166,6 +167,8 @@ export default {
 
       if (!['owner','admin'].includes(actor.role)) return error(403, 'forbidden', 'Você não possui permissão administrativa.', rid);
       if (!actor.mfaEnabled) return error(403, 'mfa_required', 'Ative o segundo fator para acessar a administração.', rid);
+      const review = route(url.pathname, /^\/admin\/review\/([0-9a-f-]{36})$/);
+      if (review?.[1] && request.method === 'GET') return reviewPage(env, actor, review[1], rid);
       if (url.pathname === '/api/admin/users' && request.method === 'GET') return listPortalUsers(env);
       if (url.pathname === '/api/admin/users' && request.method === 'POST') return createPortalUser(request, env, actor, rid);
       if (url.pathname === '/api/admin/embeds' && request.method === 'POST') return createEmbed(request, env, actor, rid);
