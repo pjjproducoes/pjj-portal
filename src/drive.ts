@@ -158,3 +158,11 @@ export async function ensureFolder(env: Env, input: {
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json; charset=UTF-8' },
     body: JSON.stringify({
       name: input.name.slice(0, 200),
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: [input.parentId],
+      appProperties: { pjjManaged: 'true', pjjEntityType: input.entityType, pjjEntityId: input.entityId }
+    })
+  });
+  if (!created.ok) throw new Error(`drive_folder_create_${created.status}`);
+  return (await created.json<{ id: string }>()).id;
+}
