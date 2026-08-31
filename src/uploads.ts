@@ -127,7 +127,9 @@ export async function putChunk(request: Request, env: Env, actor: Principal, upl
     env.DB.prepare("UPDATE upload_sessions SET status='completed',received_bytes=total_bytes,updated_at=CURRENT_TIMESTAMP WHERE id=?1").bind(uploadId),
     env.DB.prepare("UPDATE assets SET original_drive_file_id=?2,size_bytes=?3,status='received',metadata_json=?4,updated_at=CURRENT_TIMESTAMP WHERE id=?1")
       .bind(row.asset_id, completed.id, Number(completed.size || total), JSON.stringify({ md5Checksum: completed.md5Checksum ?? null })),
-    env.DB.prepare("INSERT INTO processing_jobs(id,asset_id,kind,status) VALUES(?1,?2,'detect_and_validate','queued')").bind(jobId, row.asset_id)
+    env.DB.prepare("INSERT INTO processing_jobs(id,asset_id,kind,status) VALUES(?1,?2,'detect_and_validate','queued')").bind(jobId, row.asset_id),
+    env.DB.prepare("UPDATE projects SET status='processing',updated_at=CURRENT_TIMESTAMP WHERE id=?1 AND status IN ('draft','review')").bind(row.project_id),
+    env.DB.prepare("UPDATE captures SET status='processing',updated_at=CURRENT_TIMESTAMP WHERE id=(SELECT capture_id FROM assets WHERE id=?1) AND status IN ('draft','uploading','review')").bind(row.asset_id)
   ]);
   await audit(env, { requestId: rid, actorType: 'admin', actorId: actor.userId, action: 'upload.completed', targetType: 'asset', targetId: row.asset_id, metadata: { jobId } });
   return json({ status: 'completed', assetId: row.asset_id, jobId });

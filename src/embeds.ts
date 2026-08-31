@@ -10,14 +10,15 @@ function requestHost(request:Request):string|null{return hostname(request.header
 export function validDomain(actual:string, allowed:string):boolean{return actual===allowed||actual.endsWith('.'+allowed)}
 
 export async function createEmbed(request:Request,env:Env,actor:Principal,rid:string):Promise<Response>{
-  let input:{projectId:string;name:string;domains:string[];products?:string[];expiresAt?:string};
+  let input:{projectId:string;name:string;domains:string[];products?:string[];expiresAt?:string;mode?:'pjj'|'white_label';brandName?:string;accent?:string};
   try{input=await readJson(request)}catch{return error(400,'invalid_json','Dados inválidos.',rid)}
   const domains=[...new Set((input.domains||[]).map(x=>hostname(x.includes('://')?x:`https://${x}`)).filter((x):x is string=>!!x))];
   if(!input.projectId||!input.name?.trim()||!domains.length)return error(400,'invalid_embed','Projeto, nome e domínio são obrigatórios.',rid);
-  const project=await env.DB.prepare("SELECT id FROM projects WHERE id=?1 AND status!='trashed'").bind(input.projectId).first();
+  const project=await env.DB.prepare("SELECT p.id,c.name client_name,c.branding_json FROM projects p JOIN clients c ON c.id=p.client_id WHERE p.id=?1 AND p.status!='trashed'").bind(input.projectId).first<{id:string;client_name:string;branding_json:string}>();
   if(!project)return error(404,'project_not_found','Projeto não encontrado.',rid);
-  const token=randomToken(),id=crypto.randomUUID();
-  const statements=[env.DB.prepare('INSERT INTO embeds(id,project_id,name,token_hash,allowed_products_json,expires_at,created_by) VALUES(?1,?2,?3,?4,?5,?6,?7)').bind(id,input.projectId,input.name.trim(),await sha256Hex(token),JSON.stringify(input.products||[]),input.expiresAt||null,actor.userId)];
+  const token=randomToken(),id=crypto.randomUUID(),clientBrand=JSON.parse(project.branding_json||'{}');
+  const branding=input.mode==='white_label'?{mode:'white_label',name:input.brandName?.trim()||clientBrand.name||project.client_name,accent:/^#[0-9a-f]{6}$/i.test(input.accent||'')?input.accent:clientBrand.accent||'#173f35'}:{mode:'pjj',name:'PJJ Portal',accent:'#173f35'};
+  const statements=[env.DB.prepare('INSERT INTO embeds(id,project_id,name,token_hash,allowed_products_json,branding_json,expires_at,created_by) VALUES(?1,?2,?3,?4,?5,?6,?7,?8)').bind(id,input.projectId,input.name.trim(),await sha256Hex(token),JSON.stringify(input.products||[]),JSON.stringify(branding),input.expiresAt||null,actor.userId)];
   for(const domain of domains)statements.push(env.DB.prepare('INSERT INTO embed_domains(id,embed_id,hostname) VALUES(?1,?2,?3)').bind(crypto.randomUUID(),id,domain));
   await env.DB.batch(statements);await audit(env,{requestId:rid,actorType:'admin',actorId:actor.userId,action:'embed.created',targetType:'embed',targetId:id,metadata:{domains}});
   return json({embed:{id,projectId:input.projectId,name:input.name,domains},token,url:`${env.PUBLIC_ORIGIN}/embed/${token}`},201);
@@ -37,9 +38,9 @@ export async function embedPage(request:Request,env:Env,token:string,rid:string)
   const embed=await authorizedEmbed(request,env,token);if(!embed)return error(403,'embed_denied','Este domínio não está autorizado.',rid);
   const assets=await env.DB.prepare(`SELECT id,type,title,mime_type FROM assets WHERE project_id=?1 AND status='published' ORDER BY created_at DESC`).bind(embed.project_id).all();
   const allowed=JSON.parse(embed.allowed_products_json||'[]') as string[];const visible=(assets.results as any[]).filter(a=>!allowed.length||allowed.includes(a.id)||allowed.includes(a.type));
-  const nonce=randomToken(12),ancestors=embed.domains.map(d=>`https://${d} https://*.${d}`).join(' ');
+  const nonce=randomToken(12),ancestors=embed.domains.map(d=>`https://${d} https://*.${d}`).join(' '),branding=JSON.parse(embed.branding_json||'{}'),brand=branding.name||'PJJ Portal',accent=/^#[0-9a-f]{6}$/i.test(branding.accent||'')?branding.accent:'#173f35';
   const items=visible.map((a:any)=>`<li><strong>${escapeHtml(a.title)}</strong><span>${escapeHtml(a.type)}</span><a href="/api/embed/${token}/assets/${a.id}/content" target="_blank" rel="noopener">Abrir</a></li>`).join('');
-  const markup=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${escapeHtml(embed.project_name)}</title><style nonce="${nonce}">body{margin:0;background:#f3f3ee;color:#172620;font:15px system-ui}.head{padding:20px 24px;background:#163f34;color:#fff}.head small{opacity:.7}ul{list-style:none;margin:0;padding:16px;display:grid;gap:10px}li{display:grid;grid-template-columns:1fr auto auto;gap:16px;align-items:center;background:#fff;padding:16px;border-radius:12px}a{color:#23634f;font-weight:700}</style></head><body><header class="head"><small>PJJ Portal</small><h2>${escapeHtml(embed.project_name)}</h2></header><ul>${items||'<li>Nenhum produto publicado.</li>'}</ul></body></html>`;
+  const markup=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${escapeHtml(embed.project_name)}</title><style nonce="${nonce}">body{margin:0;background:#f3f3ee;color:#172620;font:15px system-ui}.head{padding:20px 24px;background:${accent};color:#fff}.head small{opacity:.78}ul{list-style:none;margin:0;padding:16px;display:grid;gap:10px}li{display:grid;grid-template-columns:1fr auto auto;gap:16px;align-items:center;background:#fff;padding:16px;border-radius:12px}a{color:${accent};font-weight:700}</style></head><body><header class="head"><small>${escapeHtml(brand)}</small><h2>${escapeHtml(embed.project_name)}</h2></header><ul>${items||'<li>Nenhum produto publicado.</li>'}</ul></body></html>`;
   await audit(env,{requestId:rid,actorType:'embed',actorId:embed.id,action:'embed.viewed',targetType:'project',targetId:embed.project_id,metadata:{host:requestHost(request)}});
   const response=html(markup,nonce);response.headers.set('content-security-policy',`default-src 'none'; style-src 'nonce-${nonce}'; frame-ancestors ${ancestors}; base-uri 'none'`);response.headers.delete('x-frame-options');return response;
 }

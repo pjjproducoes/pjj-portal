@@ -87,6 +87,10 @@ export async function internalRoute(request: Request, env: Env, rid: string): Pr
     statements.push(env.DB.prepare("UPDATE processing_jobs SET status='succeeded',progress=100,finished_at=CURRENT_TIMESTAMP,heartbeat_at=CURRENT_TIMESTAMP,output_json=?2 WHERE id=?1")
       .bind(jobId, JSON.stringify({ metadata: input.metadata || {}, variants })));
     await env.DB.batch(statements);
+    await env.DB.prepare(`UPDATE captures SET status='review',updated_at=CURRENT_TIMESTAMP WHERE id=(SELECT capture_id FROM assets WHERE id=?1)
+      AND NOT EXISTS(SELECT 1 FROM assets a JOIN processing_jobs j ON j.asset_id=a.id WHERE a.capture_id=captures.id AND j.status NOT IN ('succeeded','cancelled'))`).bind(job.asset_id).run();
+    await env.DB.prepare(`UPDATE projects SET status='review',updated_at=CURRENT_TIMESTAMP WHERE id=(SELECT project_id FROM assets WHERE id=?1)
+      AND NOT EXISTS(SELECT 1 FROM assets a JOIN processing_jobs j ON j.asset_id=a.id WHERE a.project_id=projects.id AND j.status NOT IN ('succeeded','cancelled'))`).bind(job.asset_id).run();
     return json({ ok: true, status: 'review' });
   }
   const detail = String(input.detail || input.error || 'processing_failed').slice(0, 2000);
