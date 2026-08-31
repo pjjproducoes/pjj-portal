@@ -28,9 +28,10 @@ async function accessToken(env: Env): Promise<string> {
   }
   if(env.DRIVE_OAUTH_REFRESH_TOKEN&&env.DRIVE_OAUTH_CLIENT_ID&&env.DRIVE_OAUTH_CLIENT_SECRET){
     const response=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:env.DRIVE_OAUTH_CLIENT_ID,client_secret:env.DRIVE_OAUTH_CLIENT_SECRET,refresh_token:env.DRIVE_OAUTH_REFRESH_TOKEN,grant_type:'refresh_token'})});
-    if(!response.ok)throw new Error(`drive_user_auth_${response.status}`);
-    const result=await response.json<{access_token:string;expires_in:number}>();cachedToken={token:result.access_token,expiresAt:Date.now()+result.expires_in*1000};
-    await env.DB.prepare(`INSERT INTO drive_oauth_cache(cache_key,token_ciphertext,expires_at) VALUES(?1,?2,datetime('now',?3)) ON CONFLICT(cache_key) DO UPDATE SET token_ciphertext=excluded.token_ciphertext,expires_at=excluded.expires_at,updated_at=CURRENT_TIMESTAMP`).bind(cacheKey,await encrypt(result.access_token,env.DATA_ENCRYPTION_KEY),`+${Math.max(60,result.expires_in-30)} seconds`).run();return result.access_token;
+    if(response.ok){
+      const result=await response.json<{access_token:string;expires_in:number}>();cachedToken={token:result.access_token,expiresAt:Date.now()+result.expires_in*1000};
+      await env.DB.prepare(`INSERT INTO drive_oauth_cache(cache_key,token_ciphertext,expires_at) VALUES(?1,?2,datetime('now',?3)) ON CONFLICT(cache_key) DO UPDATE SET token_ciphertext=excluded.token_ciphertext,expires_at=excluded.expires_at,updated_at=CURRENT_TIMESTAMP`).bind(cacheKey,await encrypt(result.access_token,env.DATA_ENCRYPTION_KEY),`+${Math.max(60,result.expires_in-30)} seconds`).run();return result.access_token;
+    }
   }
   const account = JSON.parse(env.DRIVE_SERVICE_ACCOUNT_JSON) as ServiceAccount;
   const now = Math.floor(Date.now() / 1000);
