@@ -38,10 +38,17 @@
     },
     "production": {
       "name": "pjj-portal",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "pjj-portal-production",
+          "database_id": "32761db2-d569-4d09-8b40-96111721812b"
+        }
+      ],
       "vars": {
         "ENVIRONMENT": "production",
         "DRIVE_ROOT_FOLDER_ID": "1sVA2TzVvAQ4mRGSzU6PvXF5vbIFspAvz",
-        "PUBLIC_ORIGIN": "https://pjjproducoes.github.io"
+        "PUBLIC_ORIGIN": "https://pjj-portal.contato-pjjproducoes.workers.dev"
       }
     }
   }
