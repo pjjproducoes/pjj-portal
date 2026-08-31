@@ -1,109 +1,1 @@
-import type { Env } from './env';
-import { encrypt } from './crypto';
-import { error, json, readJson } from './http';
-import { sha256Hex } from './crypto';
-
-async function authorized(request: Request, env: Env): Promise<boolean> {
-  const supplied = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || '';
-  if (!supplied) return false;
-  let privateKey = '';
-  try { privateKey = JSON.parse(env.DRIVE_SERVICE_ACCOUNT_JSON).private_key || ''; } catch { return false; }
-  const expected = await sha256Hex(`${privateKey}|pjj-processor-v1`);
-  const [a, b] = await Promise.all([sha256Hex(supplied), sha256Hex(expected)]);
-  let diff = a.length ^ b.length;
-  for (let i = 0; i < Math.max(a.length, b.length); i++) diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
-  return diff === 0;
-}
-
-export async function internalRoute(request: Request, env: Env, rid: string): Promise<Response> {
-  if (!await authorized(request, env)) return error(401, 'unauthorized', 'Credencial interna inv√°lida.', rid);
-  const path = new URL(request.url).pathname;
-
-  if (path === '/api/internal/drive-token' && request.method === 'POST') {
-    let input: { accessToken?: string; expiresIn?: number };
-    try { input = await readJson(request); } catch { return error(400, 'invalid_json', 'Payload inv√°lido.', rid); }
-    if (!input.accessToken || input.accessToken.length < 100 || !Number.isFinite(input.expiresIn) || (input.expiresIn || 0) < 120) {
-      return error(400, 'invalid_token', 'Token ou validade inv√°lidos.', rid);
-    }
-    const ttl = Math.min(3600, Math.floor(input.expiresIn! - 30));
-    await env.DB.prepare(`INSERT INTO drive_oauth_cache(cache_key,token_ciphertext,expires_at) VALUES('service_account',?1,datetime('now',?2))
-      ON CONFLICT(cache_key) DO UPDATE SET token_ciphertext=excluded.token_ciphertext,expires_at=excluded.expires_at,updated_at=CURRENT_TIMESTAMP`)
-      .bind(await encrypt(input.accessToken, env.DATA_ENCRYPTION_KEY), `+${ttl} seconds`).run();
-    return json({ ok: true, expiresIn: ttl });
-  }
-
-  if (path === '/api/internal/jobs/claim' && request.method === 'POST') {
-    await env.DB.prepare(`UPDATE processing_jobs SET status='retrying',progress=0,error_code='runner_interrupted',
-      error_message='O executor anterior foi interrompido; processamento retomado automaticamente.',next_attempt_at=CURRENT_TIMESTAMP
-      WHERE status='running' AND heartbeat_at<datetime('now','-6 hours')`).run();
-    const job = await env.DB.prepare(`SELECT j.id job_id,j.asset_id,a.type,a.original_name,a.original_drive_file_id,
-      COALESCE(c.drive_folder_id,p.drive_folder_id) output_folder_id,a.size_bytes
-      FROM processing_jobs j JOIN assets a ON a.id=j.asset_id JOIN projects p ON p.id=a.project_id
-      LEFT JOIN captures c ON c.id=a.capture_id
-      WHERE j.status IN ('queued','retrying') AND (j.next_attempt_at IS NULL OR j.next_attempt_at<=CURRENT_TIMESTAMP)
-      ORDER BY j.queued_at LIMIT 1`).first<Record<string, unknown>>();
-    if (!job) return new Response(null, { status: 204 });
-    const claimed = await env.DB.prepare(`UPDATE processing_jobs SET status='running',attempt=attempt+1,progress=5,
-      started_at=COALESCE(started_at,CURRENT_TIMESTAMP),heartbeat_at=CURRENT_TIMESTAMP,error_code=NULL,error_message=NULL
-      WHERE id=?1 AND status IN ('queued','retrying')`).bind(job.job_id).run();
-    if (!claimed.meta.changes) return new Response(null, { status: 204 });
-    await env.DB.prepare("UPDATE assets SET status='validating',error_code=NULL,error_message=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?1")
-      .bind(job.asset_id).run();
-    return json(job);
-  }
-
-  if (path === '/api/internal/backup' && request.method === 'POST') {
-    const tables=['schema_migrations','clients','projects','captures','users','project_members','assets','asset_variants','processing_jobs','embeds','embed_domains','access_grants','invitations','mfa_recovery_codes','audit_logs'];
-    const data:Record<string,unknown[]>={};
-    for(const table of tables){const result=await env.DB.prepare(`SELECT * FROM ${table}`).all();data[table]=result.results}
-    return json({format:'pjj-d1-backup-v1',createdAt:new Date().toISOString(),environment:env.ENVIRONMENT,tables:data});
-  }
-
-  const match = path.match(/^\/api\/internal\/jobs\/([0-9a-f-]{36})\/(heartbeat|complete|fail)$/);
-  if (!match || request.method !== 'POST') return error(404, 'not_found', 'Rota interna n√£o encontrada.', rid);
-  const [, jobId, action] = match;
-  if (action === 'heartbeat') {
-    let input: { progress?: number } = {};
-    try { input = await readJson(request); } catch {}
-    const progress = Math.max(5, Math.min(95, Math.floor(input.progress || 10)));
-    await env.DB.prepare("UPDATE processing_jobs SET heartbeat_at=CURRENT_TIMESTAMP,progress=?2 WHERE id=?1 AND status='running'").bind(jobId, progress).run();
-    return json({ ok: true });
-  }
-  let input: { metadata?: unknown; variants?: Array<{type:string;driveFileId:string;format:string;mimeType?:string;sizeBytes?:number;sha256?:string}>; error?:string; detail?:string };
-  try { input = await readJson(request); } catch { return error(400, 'invalid_json', 'Payload inv√°lido.', rid); }
-  const job = await env.DB.prepare("SELECT asset_id,attempt,max_attempts FROM processing_jobs WHERE id=?1 AND status='running'").bind(jobId)
-    .first<{asset_id:string;attempt:number;max_attempts:number}>();
-  if (!job) return error(409, 'job_not_running', 'Job n√£o est√° em execu√ß√£o.', rid);
-  if (action === 'complete') {
-    const variants = Array.isArray(input.variants) ? input.variants : [];
-    const statements = variants.map(v => env.DB.prepare(`INSERT INTO asset_variants(id,asset_id,variant_type,drive_file_id,format,mime_type,size_bytes,checksum_sha256,status)
-      VALUES(?1,?2,?3,?4,?5,?6,?7,?8,'ready') ON CONFLICT(asset_id,variant_type) DO UPDATE SET drive_file_id=excluded.drive_file_id,
-      format=excluded.format,mime_type=excluded.mime_type,size_bytes=excluded.size_bytes,checksum_sha256=excluded.checksum_sha256,status='ready',updated_at=CURRENT_TIMESTAMP`)
-      .bind(crypto.randomUUID(), job.asset_id, v.type, v.driveFileId, v.format, v.mimeType || null, v.sizeBytes || null, v.sha256 || null));
-    const detected=(input.metadata as {detectedType?:string}|undefined)?.detectedType;
-    const validTypes=new Set(['orthophoto','dsm','dtm','model_3d','point_cloud','photo','video','pdf','document','source','other']);
-    statements.push(env.DB.prepare("UPDATE assets SET status='review',type=CASE WHEN ?3 IS NOT NULL THEN ?3 ELSE type END,metadata_json=?2,error_code=NULL,error_message=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?1")
-      .bind(job.asset_id, JSON.stringify(input.metadata || {}),detected&&validTypes.has(detected)?detected:null));
-    statements.push(env.DB.prepare("UPDATE processing_jobs SET status='succeeded',progress=100,finished_at=CURRENT_TIMESTAMP,heartbeat_at=CURRENT_TIMESTAMP,output_json=?2 WHERE id=?1")
-      .bind(jobId, JSON.stringify({ metadata: input.metadata || {}, variants })));
-    await env.DB.batch(statements);
-    await env.DB.prepare(`UPDATE captures SET status='review',updated_at=CURRENT_TIMESTAMP WHERE id=(SELECT capture_id FROM assets WHERE id=?1)
-      AND NOT EXISTS(SELECT 1 FROM assets a JOIN processing_jobs j ON j.asset_id=a.id WHERE a.capture_id=captures.id AND j.status NOT IN ('succeeded','cancelled'))`).bind(job.asset_id).run();
-    await env.DB.prepare(`UPDATE projects SET status='review',updated_at=CURRENT_TIMESTAMP WHERE id=(SELECT project_id FROM assets WHERE id=?1)
-      AND NOT EXISTS(SELECT 1 FROM assets a JOIN processing_jobs j ON j.asset_id=a.id WHERE a.project_id=projects.id AND j.status NOT IN ('succeeded','cancelled'))`).bind(job.asset_id).run();
-    return json({ ok: true, status: 'review' });
-  }
-  const detail = String(input.detail || input.error || 'processing_failed').slice(0, 2000);
-  if (job.attempt < job.max_attempts) {
-    await env.DB.batch([
-      env.DB.prepare("UPDATE processing_jobs SET status='retrying',progress=0,error_code=?2,error_message=?3,next_attempt_at=datetime('now','+5 minutes'),heartbeat_at=CURRENT_TIMESTAMP WHERE id=?1").bind(jobId, input.error || 'processing_failed', detail),
-      env.DB.prepare("UPDATE assets SET status='processing',error_code=?2,error_message=?3,updated_at=CURRENT_TIMESTAMP WHERE id=?1").bind(job.asset_id, input.error || 'processing_failed', detail)
-    ]);
-    return json({ ok: true, status: 'retrying' });
-  }
-  await env.DB.batch([
-    env.DB.prepare("UPDATE processing_jobs SET status='failed',error_code=?2,error_message=?3,finished_at=CURRENT_TIMESTAMP,heartbeat_at=CURRENT_TIMESTAMP WHERE id=?1").bind(jobId, input.error || 'processing_failed', detail),
-    env.DB.prepare("UPDATE assets SET status='failed',error_code=?2,error_message=?3,updated_at=CURRENT_TIMESTAMP WHERE id=?1").bind(job.asset_id, input.error || 'processing_failed', detail)
-  ]);
-  return json({ ok: true, status: 'failed' });
-}
+Y™Áäx-ÆÈ‹j◊ù¢Îi∫⁄+äßj[hëÈ‹¢ÈÌﬂN=NãZñã≠¶Îeäw¨’•µ¡Ω…–Å—Â¡îÅÏÅπÿÅÙÅô…Ω¥Äú∏ΩïπÿúÏ)•µ¡Ω…–ÅÏÅïπç…Â¡–ÅÙÅô…Ω¥Äú∏Ωç…Â¡—ºúÏ)•µ¡Ω…–ÅÏÅï……Ω»∞Å©ÕΩ∏∞Å…ïÖë)ÕΩ∏ÅÙÅô…Ω¥Äú∏Ω°——¿úÏ)•µ¡Ω…–ÅÏÅÕ°Ñ»‘Ÿ!ï‡ÅÙÅô…Ω¥Äú∏Ωç…Â¡—ºúÏ)•µ¡Ω…–ÅÏÅë…•ŸïççïÕÕQΩ≠ï∏ÅÙÅô…Ω¥Äú∏Ωë…•ŸîúÏ()ÖÕÂπåÅô’πç—•Ω∏ÅÖ’—°Ω…•Èïê°…ï≈’ïÕ–ËÅIï≈’ïÕ–∞ÅïπÿËÅπÿ§ËÅA…Ωµ•ÕîÒâΩΩ±ïÖ∏¯ÅÏ(ÄÅçΩπÕ–ÅÕ’¡¡±•ïêÄÙÅ…ï≈’ïÕ–π°ïÖëï…Ãπùï–†ùÖ’—°Ω…•ÈÖ—•Ω∏ú§¸π…ï¡±Öçî†Ωy	ïÖ…ï…qÃ¨Ω§∞Äúú§ÅÒÄúúÏ(ÄÅ•òÄ†ÖÕ’¡¡±•ïê§Å…ï—’…∏ÅôÖ±ÕîÏ(ÄÅ±ï–Å¡…•ŸÖ—ï-ï‰ÄÙÄúúÏ(ÄÅ—…‰ÅÏÅ¡…•ŸÖ—ï-ï‰ÄÙÅ)M=8π¡Ö…Õî°ïπÿπI%Y}MIY%}=U9Q})M=8§π¡…•ŸÖ—ï}≠ï‰ÅÒÄúúÏÅÙÅçÖ—ç†ÅÏÅ…ï—’…∏ÅôÖ±ÕîÏÅÙ(ÄÅçΩπÕ–Åï·¡ïç—ïêÄÙÅÖ›Ö•–ÅÕ°Ñ»‘Ÿ!ï‡°ÄëÌ¡…•ŸÖ—ï-ïÂıÒ¡©®µ¡…ΩçïÕÕΩ»µÿ≈Ä§Ï(ÄÅçΩπÕ–ÅmÑ∞ÅâtÄÙÅÖ›Ö•–ÅA…Ωµ•ÕîπÖ±∞°mÕ°Ñ»‘Ÿ!ï‡°Õ’¡¡±•ïê§∞ÅÕ°Ñ»‘Ÿ!ï‡°ï·¡ïç—ïê•t§Ï(ÄÅ±ï–Åë•ôòÄÙÅÑπ±ïπù—†ÅxÅàπ±ïπù—†Ï(ÄÅôΩ»Ä°±ï–Å§ÄÙÄ¿ÏÅ§ÄÅ5Ö—†πµÖ‡°Ñπ±ïπù—†∞Åàπ±ïπù—†§ÏÅ§¨¨§Åë•ôòÅÙÄ°Ñπç°Ö…Ωëï–°§§ÅÒÄ¿§ÅxÄ°àπç°Ö…Ωëï–°§§ÅÒÄ¿§Ï(ÄÅ…ï—’…∏Åë•ôòÄÙÙÙÄ¿Ï)Ù()ï·¡Ω…–ÅÖÕÂπåÅô’πç—•Ω∏Å•π—ï…πÖ±IΩ’—î°…ï≈’ïÕ–ËÅIï≈’ïÕ–∞ÅïπÿËÅπÿ∞Å…•êËÅÕ—…•πú§ËÅA…Ωµ•ÕîÒIïÕ¡ΩπÕî¯ÅÏ(ÄÅ•òÄ†ÖÖ›Ö•–ÅÖ’—°Ω…•Èïê°…ï≈’ïÕ–∞Åïπÿ§§Å…ï—’…∏Åï……Ω»†–¿ƒ∞Äù’πÖ’—°Ω…•Èïêú∞Äù…ïëïπç•Ö∞Å•π—ï…πÑÅ•π€Ö±•ëÑ∏ú∞Å…•ê§Ï(ÄÅçΩπÕ–Å¡Ö—†ÄÙÅπï‹ÅUI0°…ï≈’ïÕ–π’…∞§π¡Ö—°πÖµîÏ((ÄÅ•òÄ°¡Ö—†ÄÙÙÙÄúΩÖ¡§Ω•π—ï…πÖ∞Ωë…•Ÿîµ—Ω≠ï∏úÄòòÅ…ï≈’ïÕ–πµï—°ΩêÄÙÙÙÄùPú§ÅÏ(ÄÄÄÅ…ï—’…∏Å©ÕΩ∏°ÏÅÖççïÕÕQΩ≠ï∏ËÅÖ›Ö•–Åë…•ŸïççïÕÕQΩ≠ï∏°ïπÿ§ÅÙ§Ï(ÄÅÙ((ÄÅ•òÄ°¡Ö—†ÄÙÙÙÄúΩÖ¡§Ω•π—ï…πÖ∞Ωë…•Ÿîµ—Ω≠ï∏úÄòòÅ…ï≈’ïÕ–πµï—°ΩêÄÙÙÙÄùA=MPú§ÅÏ(ÄÄÄÅ±ï–Å•π¡’–ËÅÏÅÖççïÕÕQΩ≠ï∏¸ËÅÕ—…•πúÏÅï·¡•…ïÕ%∏¸ËÅπ’µâï»ÅÙÏ(ÄÄÄÅ—…‰ÅÏÅ•π¡’–ÄÙÅÖ›Ö•–Å…ïÖë)ÕΩ∏°…ï≈’ïÕ–§ÏÅÙÅçÖ—ç†ÅÏÅ…ï—’…∏Åï……Ω»†–¿¿∞Äù•πŸÖ±•ë}©ÕΩ∏ú∞ÄùAÖÂ±ΩÖêÅ•π€Ö±•ëº∏ú∞Å…•ê§ÏÅÙ(ÄÄÄÅ•òÄ†Ö•π¡’–πÖççïÕÕQΩ≠ï∏ÅÒÅ•π¡’–πÖççïÕÕQΩ≠ï∏π±ïπù—†ÄÄƒ¿¿ÅÒÄÖ9’µâï»π•Õ•π•—î°•π¡’–πï·¡•…ïÕ%∏§ÅÒÄ°•π¡’–πï·¡•…ïÕ%∏ÅÒÄ¿§ÄÄƒ»¿§ÅÏ(ÄÄÄÄÄÅ…ï—’…∏Åï……Ω»†–¿¿∞Äù•πŸÖ±•ë}—Ω≠ï∏ú∞ÄùQΩ≠ï∏ÅΩ‘ÅŸÖ±•ëÖëîÅ•π€Ö±•ëΩÃ∏ú∞Å…•ê§Ï(ÄÄÄÅÙ(ÄÄÄÅçΩπÕ–Å——∞ÄÙÅ5Ö—†πµ•∏†Ãÿ¿¿∞Å5Ö—†πô±ΩΩ»°•π¡’–πï·¡•…ïÕ%∏ÑÄ¥ÄÃ¿§§Ï(ÄÄÄÅÖ›Ö•–Åïπÿππ¡…ï¡Ö…î°Å%9MIPÅ%9Q<Åë…•Ÿï}ΩÖ’—°}çÖç°î°çÖç°ï}≠ï‰±—Ω≠ïπ}ç•¡°ï…—ï·–±ï·¡•…ïÕ}Ö–§ÅY1UL†ùÕï…Ÿ•çï}ÖççΩ’π–ú∞¸ƒ±ëÖ—ï—•µî†ùπΩ‹ú∞¸»§§(ÄÄÄÄÄÅ=8Å=91%P°çÖç°ï}≠ï‰§Å<ÅUAQÅMPÅ—Ω≠ïπ}ç•¡°ï…—ï·–ıï·ç±’ëïêπ—Ω≠ïπ}ç•¡°ï…—ï·–±ï·¡•…ïÕ}Ö–ıï·ç±’ëïêπï·¡•…ïÕ}Ö–±’¡ëÖ—ïë}Ö–ıUII9Q}Q%5MQ5AÄ§(ÄÄÄÄÄÄπâ•πê°Ö›Ö•–Åïπç…Â¡–°•π¡’–πÖççïÕÕQΩ≠ï∏∞ÅïπÿπQ}9IeAQ%=9}-d§∞ÅÄ¨ëÌ——±ÙÅÕïçΩπëÕÄ§π…’∏†§Ï(ÄÄÄÅ…ï—’…∏Å©ÕΩ∏°ÏÅΩ¨ËÅ—…’î∞Åï·¡•…ïÕ%∏ËÅ——∞ÅÙ§Ï(ÄÅÙ((ÄÅ•òÄ°¡Ö—†ÄÙÙÙÄúΩÖ¡§Ω•π—ï…πÖ∞Ω©ΩâÃΩç±Ö•¥úÄòòÅ…ï≈’ïÕ–πµï—°ΩêÄÙÙÙÄùA=MPú§ÅÏ(ÄÄÄÅÖ›Ö•–Åïπÿππ¡…ï¡Ö…î°ÅUAQÅ¡…ΩçïÕÕ•πù}©ΩâÃÅMPÅÕ—Ö—’ÃÙù…ï—…Â•πúú±¡…Ωù…ïÕÃÙ¿±ï……Ω…}çΩëîÙù…’ππï…}•π—ï……’¡—ïêú∞(ÄÄÄÄÄÅï……Ω…}µïÕÕÖùîÙù<Åï·ïç’—Ω»ÅÖπ—ï…•Ω»ÅôΩ§Å•π—ï……Ωµ¡•ëºÏÅ¡…ΩçïÕÕÖµïπ—ºÅ…ï—ΩµÖëºÅÖ’—ΩµÖ—•çÖµïπ—î∏ú±πï·—}Ö——ïµ¡—}Ö–ıUII9Q}Q%5MQ5@(ÄÄÄÄÄÅ]!IÅÕ—Ö—’ÃÙù…’ππ•πúúÅ9Å°ïÖ…—âïÖ—}Ö–ÒëÖ—ï—•µî†ùπΩ‹ú∞ú¥ÿÅ°Ω’…Ãú•Ä§π…’∏†§Ï(ÄÄÄÅçΩπÕ–Å©ΩàÄÙÅÖ›Ö•–Åïπÿππ¡…ï¡Ö…î°ÅM1PÅ®π•êÅ©Ωâ}•ê±®πÖÕÕï—}•ê±Ñπ—Â¡î±ÑπΩ…•ù•πÖ±}πÖµî±ÑπΩ…•ù•πÖ±}ë…•Ÿï}ô•±ï}•ê∞(ÄÄÄÄÄÅ=1M°åπë…•Ÿï}ôΩ±ëï…}•ê±¿πë…•Ÿï}ôΩ±ëï…}•ê§ÅΩ’—¡’—}ôΩ±ëï…}•ê±ÑπÕ•Èï}âÂ—ïÃ(ÄÄÄÄÄÅI=4Å¡…ΩçïÕÕ•πù}©ΩâÃÅ®Å)=%8ÅÖÕÕï—ÃÅÑÅ=8ÅÑπ•êı®πÖÕÕï—}•êÅ)=%8Å¡…Ω©ïç—ÃÅ¿Å=8Å¿π•êıÑπ¡…Ω©ïç—}•ê(ÄÄÄÄÄÅ1PÅ)=%8ÅçÖ¡—’…ïÃÅåÅ=8Ååπ•êıÑπçÖ¡—’…ï}•ê(ÄÄÄÄÄÅ]!IÅ®πÕ—Ö—’ÃÅ%8Ä†ù≈’ï’ïêú∞ù…ï—…Â•πúú§Å9Ä°®ππï·—}Ö——ïµ¡—}Ö–Å%LÅ9U10Å=HÅ®ππï·—}Ö——ïµ¡—}Ö–ıUII9Q}Q%5MQ5@§(ÄÄÄÄÄÅ=IHÅ	dÅ®π≈’ï’ïë}Ö–Å1%5%PÄ≈Ä§πô•…Õ–ÒIïçΩ…êÒÕ—…•πú∞Å’π≠πΩ›∏¯¯†§Ï(ÄÄÄÅ•òÄ†Ö©Ωà§Å…ï—’…∏Åπï‹ÅIïÕ¡ΩπÕî°π’±∞∞ÅÏÅÕ—Ö—’ÃËÄ»¿–ÅÙ§Ï(ÄÄÄÅçΩπÕ–Åç±Ö•µïêÄÙÅÖ›Ö•–Åïπÿππ¡…ï¡Ö…î°ÅUAQÅ¡…ΩçïÕÕ•πù}©ΩâÃÅMPÅÕ—Ö—’ÃÙù…’ππ•πúú±Ö——ïµ¡–ıÖ——ïµ¡–¨ƒ±¡…Ωù…ïÕÃÙ‘∞(ÄÄÄÄÄÅÕ—Ö…—ïë}Ö–ı=1M°Õ—Ö…—ïë}Ö–±UII9Q}Q%5MQ5@§±°ïÖ…—âïÖ—}Ö–ıUII9Q}Q%5MQ5@±ï……Ω…}çΩëîı9U10±ï……Ω…}µïÕÕÖùîı9U10(ÄÄÄÄÄÅ]!IÅ•êÙ¸ƒÅ9ÅÕ—Ö—’ÃÅ%8Ä†ù≈’ï’ïêú∞ù…ï—…Â•πúú•Ä§πâ•πê°©Ωàπ©Ωâ}•ê§π…’∏†§Ï(ÄÄÄÅ•òÄ†Öç±Ö•µïêπµï—Ñπç°ÖπùïÃ§Å…ï—’…∏Åπï‹ÅIïÕ¡ΩπÕî°π’±∞∞ÅÏÅÕ—Ö—’ÃËÄ»¿–ÅÙ§Ï(ÄÄÄÅÖ›Ö•–Åïπÿππ¡…ï¡Ö…î†âUAQÅÖÕÕï—ÃÅMPÅÕ—Ö—’ÃÙùŸÖ±•ëÖ—•πúú±ï……Ω…}çΩëîı9U10±ï……Ω…}µïÕÕÖùîı9U10±’¡ëÖ—ïë}Ö–ıUII9Q}Q%5MQ5@Å]!IÅ•êÙ¸ƒà§(ÄÄÄÄÄÄπâ•πê°©ΩàπÖÕÕï—}•ê§π…’∏†§Ï(ÄÄÄÅ…ï—’…∏Å©ÕΩ∏°©Ωà§Ï(ÄÅÙ((ÄÅ•òÄ°¡Ö—†ÄÙÙÙÄúΩÖ¡§Ω•π—ï…πÖ∞ΩâÖç≠’¿úÄòòÅ…ï≈’ïÕ–πµï—°ΩêÄÙÙÙÄùA=MPú§ÅÏ(ÄÄÄÅçΩπÕ–Å—Öâ±ïÃılùÕç°ïµÖ}µ•ù…Ö—•ΩπÃú∞ùç±•ïπ—Ãú∞ù¡…Ω©ïç—Ãú∞ùçÖ¡—’…ïÃú∞ù’Õï…Ãú∞ù¡…Ω©ïç—}µïµâï…Ãú∞ùÖÕÕï—Ãú∞ùÖÕÕï—}ŸÖ…•Öπ—Ãú∞ù¡…ΩçïÕÕ•πù}©ΩâÃú∞ùïµâïëÃú∞ùïµâïë}ëΩµÖ•πÃú∞ùÖççïÕÕ}ù…Öπ—Ãú∞ù•πŸ•—Ö—•ΩπÃú∞ùµôÖ}…ïçΩŸï…Â}çΩëïÃú∞ùÖ’ë•—}±ΩùÃùtÏ(ÄÄÄÅçΩπÕ–ÅëÖ—ÑÈIïçΩ…êÒÕ—…•πú±’π≠πΩ›πmt¯ıÌÙÏ(ÄÄÄÅôΩ»°çΩπÕ–Å—Öâ±îÅΩòÅ—Öâ±ïÃ•ÌçΩπÕ–Å…ïÕ’±–ıÖ›Ö•–Åïπÿππ¡…ï¡Ö…î°ÅM1PÄ®ÅI=4ÄëÌ—Öâ±ïıÄ§πÖ±∞†§ÌëÖ—Öm—Öâ±ïtı…ïÕ’±–π…ïÕ’±—ÕÙ(ÄÄÄÅ…ï—’…∏Å©ÕΩ∏°ÌôΩ…µÖ–Ëù¡©®µêƒµâÖç≠’¿µÿƒú±ç…ïÖ—ïë–Èπï‹ÅÖ—î†§π—Ω%M=M—…•πú†§±ïπŸ•…Ωπµïπ–Èïπÿπ9Y%I=959P±—Öâ±ïÃÈëÖ—ÖÙ§Ï(ÄÅÙ((ÄÅçΩπÕ–ÅµÖ—ç†ÄÙÅ¡Ö—†πµÖ—ç††ΩypΩÖ¡•pΩ•π—ï…πÖ±pΩ©ΩâÕpº°l¿¥ÂÑµòµuÏÃŸÙ•pº°°ïÖ…—âïÖ—Òçøèm¢Gß≤⁄Óù∆≠y“7FñˆÂ““÷F6É∞¢ñbÜ7Fñˆ‚””“vÜV'F&VBrí∞¢∆WBñÁWC¢≤&ˆw&W73Û¢ÁV÷&W"““∑”∞¢G'í≤ñÁWB“vóB&VDß6ˆ‚á&WVW7Bì≤“6F6Ç∑–¢6ˆÁ7B&ˆw&W72“÷FÇÊ÷ÇÉR¬÷FÇÊ÷ñ‚ÉìR¬÷FÇÊf∆ˆ˜"ÜñÁWBÁ&ˆw&W72«¬ííì∞¢vóBVÁb‰D"Á&W&RÇ%UDDR&ˆ6W76ñÊuˆ¶ˆ'24UBÜV'F&VEˆC‘5U%$TÂEıDî‘U5D’«&ˆw&W73”Û"tÑU$RñC”Û‰B7FGW3“w'VÊÊñÊrr"íÊ&ñÊBÜ¶ˆ$ñB¬&ˆw&W72íÁ'V‚Çì∞¢&WGW&‚ß6ˆ‚á≤ˆ≥¢G'VR“ì∞¢–¢∆WBñÁWC¢≤÷WFFFÛ¢VÊ∂Ê˜v„≤f&ñÁG3Û¢'&ì«∑GóSß7G&ñÊs∂G&ófTfñ∆TñCß7G&ñÊs∂f˜&÷Cß7G&ñÊs∂÷ñ÷UGóSÛß7G&ñÊs∑6ó¶T'óFW3Û¶ÁV÷&W#∑6Ü#ScÛß7G&ñÊw”„≤W'&˜#Ûß7G&ñÊs≤FWFñ√Ûß7G&ñÊr”∞¢G'í≤ñÁWB“vóB&VDß6ˆ‚á&WVW7Bì≤“6F6Ç≤&WGW&‚W'&˜"ÉC¬vñÁf∆ñEˆß6ˆ‚r¬uñ∆ˆBñÁl:∆ñFÚ‚r¬&ñBì≤–¢6ˆÁ7B¶ˆ"“vóBVÁb‰D"Á&W&RÇ%4TƒT5B76WEˆñB∆GFV◊B∆÷ÖˆGFV◊G2e$Ù“&ˆ6W76ñÊuˆ¶ˆ'2tÑU$RñC”Û‰B7FGW3“w'VÊÊñÊrr"íÊ&ñÊBÜ¶ˆ$ñBê¢Êfó'7C«∂76WEˆñCß7G&ñÊs∂GFV◊C¶ÁV÷&W#∂÷ÖˆGFV◊G3¶ÁV÷&W'”‚Çì∞¢ñbÇ¶ˆ"í&WGW&‚W'&˜"ÉCí¬v¶ˆ%ˆÊ˜E˜'VÊÊñÊrr¬t¶ˆ"Ï:6ÚW7L:V“WÜV7\:|:6Ú‚r¬&ñBì∞¢ñbÜ7Fñˆ‚””“v6ˆ◊∆WFRrí∞¢6ˆÁ7Bf&ñÁG2“'&íÊó4'&íÜñÁWBÁf&ñÁG2íÚñÁWBÁf&ñÁG2¢µ”∞¢6ˆÁ7B7FFV÷VÁG2“f&ñÁG2Ê÷áb”‚VÁb‰D"Á&W&RÜîÂ4U%BîÂDÚ76WE˜f&ñÁG2ÜñB∆76WEˆñB«f&ñÁE˜GóR∆G&ófUˆfñ∆UˆñB∆f˜&÷B∆÷ñ÷U˜GóR«6ó¶Uˆ'óFW2∆6ÜV6∑7V’˜6Ü#Sb«7FGW2ê¢d≈TU2ÉÛ√Û"√Û2√ÛB√ÛR√Ûb√Ûr√ÛÇ¬w&VGíríÙ‚4Ù‰dƒî5BÜ76WEˆñB«f&ñÁE˜GóRíDÚUDDR4UBG&ófUˆfñ∆UˆñC÷WÜ6«VFVBÊG&ófUˆfñ∆UˆñB¿¢f˜&÷C÷WÜ6«VFVBÊf˜&÷B∆÷ñ÷U˜GóS÷WÜ6«VFVBÊ÷ñ÷U˜GóR«6ó¶Uˆ'óFW3÷WÜ6«VFVBÁ6ó¶Uˆ'óFW2∆6ÜV6∑7V’˜6Ü#Sc÷WÜ6«VFVBÊ6ÜV6∑7V’˜6Ü#Sb«7FGW3“w&VGír«WFFVEˆC‘5U%$TÂEıDî‘U5D’ê¢Ê&ñÊBÜ7'óFÚÁ&ÊFˆ’UTîBÇí¬¶ˆ"Ê76WEˆñB¬bÁGóR¬bÊG&ófTfñ∆TñB¬bÊf˜&÷B¬bÊ÷ñ÷UGóR«¬ÁV∆¬¬bÁ6ó¶T'óFW2«¬ÁV∆¬¬bÁ6Ü#Sb«¬ÁV∆¬íì∞¢6ˆÁ7BFWFV7FVC“ÜñÁWBÊ÷WFFF2∂FWFV7FVEGóSÛß7G&ñÊw◊«VÊFVfñÊVBìÚÊFWFV7FVEGóS∞¢6ˆÁ7Bf∆ñEGóW3÷ÊWr6WBÖ≤v˜'FÜ˜Ü˜FÚr¬vG6“r¬vGF“r¬v÷ˆFV≈Û6Br¬wˆñÁEˆ6∆˜VBr¬wÜ˜FÚr¬wfñFVÚr¬wFbr¬vFˆ7V÷VÁBr¬w6˜W&6Rr¬v˜FÜW"u“ì∞¢7FFV÷VÁG2ÁW6ÇÜVÁb‰D"Á&W&RÇ%UDDR76WG24UB7FGW3“w&WfñWrr«GóS‘44RtÑT‚Û2ï2‰ıBÂTƒ¬DÑT‚Û2T≈4RGóRT‰B∆÷WFFFˆß6ˆ„”Û"∆W'&˜%ˆ6ˆFS‘ÂTƒ¬∆W'&˜%ˆ÷W76vS‘ÂTƒ¬«WFFVEˆC‘5U%$TÂEıDî‘U5D’tÑU$RñC”Û"ê¢Ê&ñÊBÜ¶ˆ"Ê76WEˆñB¬•4Ù‚Á7G&ñÊvñgíÜñÁWBÊ÷WFFF«¬∑“í∆FWFV7FVBbgf∆ñEGóW2ÊÜ2ÜFWFV7FVBìˆFWFV7FVC¶ÁV∆¬íì∞¢7FFV÷VÁG2ÁW6ÇÜVÁb‰D"Á&W&RÇ%UDDR&ˆ6W76ñÊuˆ¶ˆ'24UB7FGW3“w7V66VVFVBr«&ˆw&W73”∆fñÊó6ÜVEˆC‘5U%$TÂEıDî‘U5D’∆ÜV'F&VEˆC‘5U%$TÂEıDî‘U5D’∆˜WGWEˆß6ˆ„”Û"tÑU$RñC”Û"ê¢Ê&ñÊBÜ¶ˆ$ñB¬•4Ù‚Á7G&ñÊvñgíá≤÷WFFF¢ñÁWBÊ÷WFFF«¬∑“¬f&ñÁG2“ííì∞¢vóBVÁb‰D"Ê&F6Çá7FFV÷VÁG2ì∞¢vóBVÁb‰D"Á&W&RÜUDDR6GW&W24UB7FGW3“w&WfñWrr«WFFVEˆC‘5U%$TÂEıDî‘U5D’tÑU$RñC“Ö4TƒT5B6GW&UˆñBe$Ù“76WG2tÑU$RñC”Ûê¢‰B‰ıBUÑï5E2Ö4TƒT5Be$Ù“76WG2§Ùî‚&ˆ6W76ñÊuˆ¶ˆ'2¢Ù‚¢Ê76WEˆñC÷ÊñBtÑU$RÊ6GW&UˆñC÷6GW&W2ÊñB‰B¢Á7FGW2‰ıBî‚Çw7V66VVFVBr¬v6Ê6V∆∆VBríñíÊ&ñÊBÜ¶ˆ"Ê76WEˆñBíÁ'V‚Çì∞¢vóBVÁb‰D"Á&W&RÜUDDR&ˆ¶V7G24UB7FGW3“w&WfñWrr«WFFVEˆC‘5U%$TÂEıDî‘U5D’tÑU$RñC“Ö4TƒT5B&ˆ¶V7EˆñBe$Ù“76WG2tÑU$RñC”Ûê¢‰B‰ıBUÑï5E2Ö4TƒT5Be$Ù“76WG2§Ùî‚&ˆ6W76ñÊuˆ¶ˆ'2¢Ù‚¢Ê76WEˆñC÷ÊñBtÑU$RÁ&ˆ¶V7EˆñC◊&ˆ¶V7G2ÊñB‰B¢Á7FGW2‰ıBî‚Çw7V66VVFVBr¬v6Ê6V∆∆VBríñíÊ&ñÊBÜ¶ˆ"Ê76WEˆñBíÁ'V‚Çì∞¢&WGW&‚ß6ˆ‚á≤ˆ≥¢G'VR¬7FGW3¢w&WfñWrr“ì∞¢–¢6ˆÁ7BFWFñ¬“7G&ñÊrÜñÁWBÊFWFñ¬«¬ñÁWBÊW'&˜"«¬w&ˆ6W76ñÊuˆfñ∆VBríÁ6∆ñ6RÉ¬#ì∞¢ñbÜ¶ˆ"ÊGFV◊B¬¶ˆ"Ê÷ÖˆGFV◊G2í∞¢vóBVÁb‰D"Ê&F6ÇÖ∞¢VÁb‰D"Á&W&RÇ%UDDR&ˆ6W76ñÊuˆ¶ˆ'24UB7FGW3“w&WG'ññÊrr«&ˆw&W73”∆W'&˜%ˆ6ˆFS”Û"∆W'&˜%ˆ÷W76vS”Û2∆ÊWáEˆGFV◊EˆC÷FFWFñ÷RÇvÊ˜rr¬r≥R÷ñÁWFW2rí∆ÜV'F&VEˆC‘5U%$TÂEıDî‘U5D’tÑU$RñC”Û"íÊ&ñÊBÜ¶ˆ$ñB¬ñÁWBÊW'&˜"«¬w&ˆ6W76ñÊuˆfñ∆VBr¬FWFñ¬í¿¢VÁb‰D"Á&W&RÇ%UDDR76WG24UB7FGW3“w&ˆ6W76ñÊrr∆W'&˜%ˆ6ˆFS”Û"∆W'&˜%ˆ÷W76vS”Û2«WFFVEˆC‘5U%$TÂEıDî‘U5D’tÑU$RñC”Û"íÊ&ñÊBÜ¶ˆ"Ê76WEˆñB¬ñÁWBÊW'&˜"«¬w&ˆ6W76ñÊuˆfñ∆VBr¬FWFñ¬ê¢“ì∞¢&WGW&‚ß6ˆ‚á≤ˆ≥¢G'VR¬7FGW3¢w&WG'ññÊrr“ì∞¢–¢vóBVÁb‰D"Ê&F6ÇÖ∞¢VÁb‰D"Á&W&RÇ%UDDR&ˆ6W76ñÊuˆ¶ˆ'24UB7FGW3“vfñ∆VBr∆W'&˜%ˆ6ˆFS”Û"∆W'&˜%ˆ÷W76vS”Û2∆fñÊó6ÜVEˆC‘5U%$TÂEıDî‘U5D’∆ÜV'F&VEˆC‘5U%$TÂEıDî‘U5D’tÑU$RñC”Û"íÊ&ñÊBÜ¶ˆ$ñB¬ñÁWBÊW'&˜"«¬w&ˆ6W76ñÊuˆfñ∆VBr¬FWFñ¬í¿¢VÁb‰D"Á&W&RÇ%UDDR76WG24UB7FGW3“vfñ∆VBr∆W'&˜%ˆ6ˆFS”Û"∆W'&˜%ˆ÷W76vS”Û2«WFFVEˆC‘5U%$TÂEıDî‘U5D’tÑU$RñC”Û"íÊ&ñÊBÜ¶ˆ"Ê76WEˆñB¬ñÁWBÊW'&˜"«¬w&ˆ6W76ñÊuˆfñ∆VBr¬FWFñ¬ê¢“ì∞¢&WGW&‚ß6ˆ‚á≤ˆ≥¢G'VR¬7FGW3¢vfñ∆VBr“ì∞ß–

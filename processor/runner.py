@@ -1,15 +1,13 @@
-import argparse, hashlib, json, os, pathlib, shutil, urllib.parse, urllib.request
-from google.auth.transport.requests import Request
-from google.oauth2 import service_account
+import argparse, hashlib, json, os, pathlib, shutil, urllib.request
 from server import process
 
 ORIGIN=os.environ['PJJ_PROCESSOR_ORIGIN'].rstrip('/')
 SERVICE_ACCOUNT=json.loads(os.environ['GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON'])
 SECRET=hashlib.sha256((SERVICE_ACCOUNT['private_key']+'|pjj-processor-v1').encode()).hexdigest()
 
-def api(path, payload=None):
+def api(path, payload=None, method='POST'):
     body=None if payload is None else json.dumps(payload).encode()
-    request=urllib.request.Request(ORIGIN+path,data=body,method='POST',headers={'Authorization':'Bearer '+SECRET,'Content-Type':'application/json'})
+    request=urllib.request.Request(ORIGIN+path,data=body,method=method,headers={'Authorization':'Bearer '+SECRET,'Content-Type':'application/json','User-Agent':'PJJ-Portal-Processor/1.0'})
     try:
         with urllib.request.urlopen(request,timeout=60) as response:
             if response.status==204:return None
@@ -18,20 +16,13 @@ def api(path, payload=None):
         raise RuntimeError(f'portal_{error.code}_{error.read().decode()[:1000]}')
 
 def token():
-    refresh=os.getenv('DRIVE_OAUTH_REFRESH_TOKEN')
-    if refresh:
-        body=urllib.parse.urlencode({'client_id':os.environ['DRIVE_OAUTH_CLIENT_ID'],'client_secret':os.environ['DRIVE_OAUTH_CLIENT_SECRET'],'refresh_token':refresh,'grant_type':'refresh_token'}).encode()
-        with urllib.request.urlopen(urllib.request.Request('https://oauth2.googleapis.com/token',data=body,method='POST',headers={'content-type':'application/x-www-form-urlencoded'}),timeout=60) as response:
-            value=json.loads(response.read());return value['access_token'],int(value.get('expires_in',3600))
-    credentials=service_account.Credentials.from_service_account_info(SERVICE_ACCOUNT,scopes=['https://www.googleapis.com/auth/drive'])
-    credentials.refresh(Request())
-    return credentials.token,max(120,int((credentials.expiry.timestamp()-__import__('time').time())))
+    value=api('/api/internal/drive-token',method='GET')
+    return value['accessToken']
 
 def prepare(path):
-    access_token,expires_in=token();api('/api/internal/drive-token',{'accessToken':access_token,'expiresIn':expires_in})
     job=api('/api/internal/jobs/claim')
     if not job:return False
-    job['access_token']=access_token;pathlib.Path(path).write_text(json.dumps(job));return True
+    pathlib.Path(path).write_text(json.dumps(job));return True
 
 def execute(path):
     job=json.loads(pathlib.Path(path).read_text());job_id=job.pop('job_id')
@@ -39,10 +30,10 @@ def execute(path):
     if required>available:
         api(f'/api/internal/jobs/{job_id}/fail',{'error':'runner_capacity_exceeded','detail':f'Arquivo requer {required} bytes temporários; executor possui {available}.'})
         raise RuntimeError('runner_capacity_exceeded')
-    payload={'accessToken':job['access_token'],'inputFileId':job['original_drive_file_id'],'outputFolderId':job['output_folder_id'],
+    payload={'accessToken':token(),'inputFileId':job['original_drive_file_id'],'outputFolderId':job['output_folder_id'],
              'assetId':job['asset_id'],'type':job['type'],'originalName':job['original_name']}
     try:
-        api(f'/api/internal/jobs/{job_id}/heartbeat',{'progress':15});output=process(payload);api(f'/api/internal/jobs/{job_id}/complete',output)
+        api(f'/api/internal/jobs/{job_id}/heartbeat',{'progress':15});output=process(payload,token);api(f'/api/internal/jobs/{job_id}/complete',output)
     except Exception as error:
         api(f'/api/internal/jobs/{job_id}/fail',{'error':type(error).__name__,'detail':str(error)[:2000]});raise
     print(json.dumps({'ok':True,'jobId':job_id}))

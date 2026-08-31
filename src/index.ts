@@ -1,168 +1,4 @@
-import type { Env } from './env';
-import { audit } from './audit';
-import { principal, createSession, validCsrf } from './auth';
-import { constantTimeEqual, randomToken, sha256Hex } from './crypto';
-import { clearSessionCookie, error, json, readJson, requestId, sessionCookie } from './http';
-import { hashPassword, verifyPassword } from './password';
-import { cancelUpload, putChunk, startUpload, uploadStatus } from './uploads';
-import { createCapture, createClient, createProject, listCaptures, listClients, listProjects } from './admin';
-import { createMfaChallenge, enableMfa, setupMfa, verifyMfaLogin } from './mfa';
-import { adminUi, institutional, invitationUi, portalUi, privacyUi } from './ui';
-import { assetContent, portalProject, portalProjects } from './portal';
-import { acceptInvitation, createPortalUser, listPortalUsers } from './users';
-import { createEmbed, embedAsset, embedPage } from './embeds';
-import { listAssets, publishEntity, retryJob, trashEntity } from './lifecycle';
-import { viewerPage } from './viewers';
-import { authenticateGrant, createGrant, sharePage, sharedAsset, sharedProject } from './share';
-import { internalRoute } from './internal';
-import { adminOverview, listAccess, listAudit, restoreEntity, revokeAccess, updateEntity } from './admin-ops';
-import { comparisonPage } from './compare';
-import { operationsUi } from './ops-ui';
-
-function route(path: string, pattern: RegExp): RegExpMatchArray | null {
-  return path.match(pattern);
-}
-
-async function ipHash(request: Request): Promise<string> {
-  return sha256Hex(request.headers.get('cf-connecting-ip') || 'unknown');
-}
-
-async function bootstrap(request: Request, env: Env, rid: string): Promise<Response> {
-  const existing = await env.DB.prepare("SELECT id FROM users WHERE role='owner' LIMIT 1").first();
-  if (existing) return error(409, 'already_bootstrapped', 'A conta proprietÃ¡ria jÃ¡ existe.', rid);
-  const secret = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || '';
-  if (!secret || !await constantTimeEqual(await sha256Hex(secret), env.ADMIN_BOOTSTRAP_HASH)) {
-    await audit(env, { requestId: rid, actorType: 'system', action: 'auth.bootstrap', targetType: 'user', outcome: 'denied', ipHash: await ipHash(request) });
-    return error(401, 'unauthorized', 'Credencial invÃ¡lida.', rid);
-  }
-  let input: { email: string; displayName: string; password: string };
-  try { input = await readJson(request); }
-  catch { return error(400, 'invalid_json', 'Dados invÃ¡lidos.', rid); }
-  const email = input.email?.trim().toLowerCase();
-  const displayName = input.displayName?.trim();
-  if (!email || !/^\S+@\S+\.\S+$/.test(email) || !displayName || displayName.length > 100) {
-    return error(400, 'invalid_user', 'Nome ou e-mail invÃ¡lido.', rid);
-  }
-  let passwordHash: string;
-  try { passwordHash = await hashPassword(input.password); }
-  catch { return error(400, 'weak_password', 'Use uma senha com pelo menos 12 caracteres.', rid); }
-  const id = crypto.randomUUID();
-  await env.DB.prepare(
-    "INSERT INTO users(id,email,display_name,role,password_hash,status) VALUES(?1,?2,?3,'owner',?4,'active')"
-  ).bind(id, email, displayName, passwordHash).run();
-  await audit(env, { requestId: rid, actorType: 'admin', actorId: id, action: 'auth.bootstrap', targetType: 'user', targetId: id, ipHash: await ipHash(request) });
-  return json({ user: { id, email, displayName, role: 'owner' } }, 201);
-}
-
-async function login(request: Request, env: Env, rid: string): Promise<Response> {
-  let input: { email: string; password: string };
-  try { input = await readJson(request); }
-  catch { return error(400, 'invalid_json', 'Dados invÃ¡lidos.', rid); }
-  const email = input.email?.trim().toLowerCase();
-  const ip = await ipHash(request);
-  const rateKey = `login:${ip}:${email || 'invalid'}`;
-  const rate = await env.DB.prepare("SELECT attempts,blocked_until FROM rate_limits WHERE key=?1").bind(rateKey).first<{ attempts:number; blocked_until:string|null }>();
-  if (rate?.blocked_until && new Date(rate.blocked_until).getTime() > Date.now()) {
-    return error(429, 'temporarily_blocked', 'Muitas tentativas. Aguarde antes de tentar novamente.', rid);
-  }
-  const user = email ? await env.DB.prepare(
-    "SELECT id,email,display_name,role,password_hash,status,locked_until,mfa_enabled FROM users WHERE email=?1 LIMIT 1"
-  ).bind(email).first<{ id:string; email:string; display_name:string; role:'owner'|'admin'|'client'; password_hash:string|null; status:string; locked_until:string|null; mfa_enabled:number }>() : null;
-  const valid = !!user?.password_hash && user.status === 'active' && (!user.locked_until || new Date(user.locked_until).getTime() <= Date.now()) &&
-    await verifyPassword(input.password || '', user.password_hash);
-  if (!valid) {
-    await env.DB.prepare(
-      `INSERT INTO rate_limits(key,window_started_at,attempts,blocked_until) VALUES(?1,CURRENT_TIMESTAMP,1,NULL)
-       ON CONFLICT(key) DO UPDATE SET attempts=CASE WHEN window_started_at<datetime('now','-15 minutes') THEN 1 ELSE attempts+1 END,
-       window_started_at=CASE WHEN window_started_at<datetime('now','-15 minutes') THEN CURRENT_TIMESTAMP ELSE window_started_at END,
-       blocked_until=CASE WHEN attempts>=9 THEN datetime('now','+30 minutes') ELSE blocked_until END,updated_at=CURRENT_TIMESTAMP`
-    ).bind(rateKey).run();
-    await audit(env, { requestId: rid, actorType: 'system', action: 'auth.login', targetType: 'user', targetId: user?.id ?? null, outcome: 'denied', ipHash: ip });
-    return error(401, 'invalid_credentials', 'E-mail ou senha invÃ¡lidos.', rid);
-  }
-  await env.DB.prepare('DELETE FROM rate_limits WHERE key=?1').bind(rateKey).run();
-  if (user.mfa_enabled) {
-    const challengeToken = await createMfaChallenge(env, user.id);
-    return json({ mfaRequired: true, challengeToken }, 202);
-  }
-  const session = await createSession(env, user.id, request);
-  await env.DB.prepare("UPDATE users SET failed_login_count=0,locked_until=NULL,last_login_at=CURRENT_TIMESTAMP WHERE id=?1").bind(user.id).run();
-  await audit(env, { requestId: rid, actorType: user.role === 'client' ? 'client' : 'admin', actorId: user.id, action: 'auth.login', targetType: 'session', outcome: 'success', ipHash: ip });
-  return json(
-    { user: { id: user.id, email: user.email, displayName: user.display_name, role: user.role }, csrfToken: session.csrf },
-    200,
-    { 'set-cookie': sessionCookie(session.token, session.maxAge) }
-  );
-}
-
-async function authenticated(request: Request, env: Env, rid: string): Promise<{ actor: NonNullable<Awaited<ReturnType<typeof principal>>> } | Response> {
-  const actor = await principal(env, request);
-  if (!actor) return error(401, 'authentication_required', 'FaÃ§a login para continuar.', rid);
-  const sameOrigin = request.headers.get('sec-fetch-site') === 'same-origin' && request.headers.get('origin') === new URL(env.PUBLIC_ORIGIN).origin;
-  if (!['GET','HEAD','OPTIONS'].includes(request.method) && !sameOrigin && !await validCsrf(request, actor)) {
-    return error(403, 'invalid_csrf', 'A sessÃ£o nÃ£o confirmou esta operaÃ§Ã£o.', rid);
-  }
-  return { actor };
-}
-
-export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    const rid = requestId(request);
-    const url = new URL(request.url);
-    try {
-      if (['GET','HEAD'].includes(request.method) && url.pathname === '/') return institutional();
-      if (['GET','HEAD'].includes(request.method) && (url.pathname === '/privacidade' || url.pathname === '/privacy')) return privacyUi();
-      if (['GET','HEAD'].includes(request.method) && (url.pathname === '/admin' || url.pathname === '/admin/')) return adminUi();
-      if (['GET','HEAD'].includes(request.method) && url.pathname === '/admin/operations') return operationsUi();
-      if (['GET','HEAD'].includes(request.method) && (url.pathname === '/portal' || url.pathname === '/portal/')) return portalUi();
-      const invitePage = route(url.pathname, /^\/invite\/([A-Za-z0-9_-]{40,64})$/);
-      if (invitePage?.[1] && request.method === 'GET') return invitationUi(invitePage[1]);
-      if (request.method === 'GET' && url.pathname === '/api/health') {
-        return json({ ok: true, environment: env.ENVIRONMENT, storage: 'google-drive', requestId: rid });
-      }
-      if (url.pathname.startsWith('/api/internal/')) return internalRoute(request, env, rid);
-      if (request.method === 'POST' && url.pathname === '/api/auth/bootstrap') return bootstrap(request, env, rid);
-      if (request.method === 'POST' && url.pathname === '/api/auth/login') return login(request, env, rid);
-      if (request.method === 'POST' && url.pathname === '/api/auth/mfa/verify-login') return verifyMfaLogin(request, env, rid);
-      if (request.method === 'POST' && url.pathname === '/api/auth/accept-invite') return acceptInvitation(request, env, rid);
-      const share = route(url.pathname, /^\/share\/([A-Za-z0-9_-]{40,64})$/);
-      if (share?.[1] && request.method === 'GET') return sharePage(share[1]);
-      if (url.pathname === '/api/share/auth' && request.method === 'POST') return authenticateGrant(request, env, rid);
-      if (url.pathname === '/api/share/project' && request.method === 'GET') return sharedProject(request, env, rid);
-      const shareAsset = route(url.pathname, /^\/api\/share\/assets\/([0-9a-f-]{36})\/content$/);
-      if (shareAsset?.[1] && ['GET','HEAD'].includes(request.method)) return sharedAsset(request, env, shareAsset[1], rid);
-      const publicEmbed = route(url.pathname, /^\/embed\/([A-Za-z0-9_-]{40,64})$/);
-      if (publicEmbed?.[1] && request.method === 'GET') return embedPage(request, env, publicEmbed[1], rid);
-      const publicEmbedAsset = route(url.pathname, /^\/api\/embed\/([A-Za-z0-9_-]{40,64})\/assets\/([0-9a-f-]{36})\/content$/);
-      if (publicEmbedAsset?.[1] && publicEmbedAsset[2] && ['GET','HEAD'].includes(request.method)) return embedAsset(request, env, publicEmbedAsset[1], publicEmbedAsset[2], rid);
-
-      const auth = await authenticated(request, env, rid);
-      if (auth instanceof Response) return auth;
-      const { actor } = auth;
-
-      if (request.method === 'GET' && url.pathname === '/api/auth/me') {
-        const user = await env.DB.prepare('SELECT id,email,display_name,role FROM users WHERE id=?1').bind(actor.userId).first();
-        const csrfToken=randomToken();
-        await env.DB.prepare('UPDATE sessions SET csrf_hash=?1 WHERE id=?2').bind(await sha256Hex(csrfToken),actor.sessionId).run();
-        return json({ user, csrfToken });
-      }
-      if (request.method === 'POST' && url.pathname === '/api/auth/logout') {
-        await env.DB.prepare('UPDATE sessions SET revoked_at=CURRENT_TIMESTAMP WHERE id=?1').bind(actor.sessionId).run();
-        await audit(env, { requestId: rid, actorType: actor.role === 'client' ? 'client' : 'admin', actorId: actor.userId, action: 'auth.logout', targetType: 'session', targetId: actor.sessionId });
-        return json({ ok: true }, 200, { 'set-cookie': clearSessionCookie() });
-      }
-
-      if (request.method === 'POST' && url.pathname === '/api/auth/mfa/setup') return setupMfa(env, actor, rid);
-      if (request.method === 'POST' && url.pathname === '/api/auth/mfa/enable') return enableMfa(request, env, actor, rid);
-
-      if (request.method === 'GET' && url.pathname === '/api/portal/projects') return portalProjects(env, actor);
-      const portalProjectMatch = route(url.pathname, /^\/api\/portal\/projects\/([0-9a-f-]{36})$/);
-      if (portalProjectMatch?.[1] && request.method === 'GET') return portalProject(env, actor, portalProjectMatch[1], rid);
-      const portalAssetMatch = route(url.pathname, /^\/api\/portal\/assets\/([0-9a-f-]{36})\/content$/);
-      if (portalAssetMatch?.[1] && ['GET','HEAD'].includes(request.method)) return assetContent(request, env, actor, portalAssetMatch[1], rid);
-      const viewer = route(url.pathname, /^\/viewer\/([0-9a-f-]{36})$/);
-      if (viewer?.[1] && request.method === 'GET') return viewerPage(env, actor, viewer[1], rid);
-      const comparison = route(url.pathname, /^\/compare\/([0-9a-f-]{36})$/);
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éíç¸N‹Z–‹­¦ëeŠw¬Õ¥µÁ½ÉĞÑåÁ”ì¹Øô™É½´€œ¸½•¹Øœì)¥µÁ½ÉĞì…Õ‘¥Ğô™É½´€œ¸½…Õ‘¥Ğœì)¥µÁ½ÉĞìÁÉ¥¹¥Á…°°É•…Ñ•M•ÍÍ¥½¸°Ù…±¥‘ÍÉ˜ô™É½´€œ¸½…ÕÑ œì)¥µÁ½ÉĞì½¹ÍÑ…¹ÑQ¥µ•ÅÕ…°°É…¹‘½µQ½­•¸°Í¡„ÈÔÙ!•àô™É½´€œ¸½ÉåÁÑ¼œì)¥µÁ½ÉĞì±•…ÉM•ÍÍ¥½¹½½­¥”°•ÉÉ½È°©Í½¸°É•…‘)Í½¸°É•ÅÕ•ÍÑ%°Í•ÍÍ¥½¹½½­¥”ô™É½´€œ¸½¡ÑÑÀœì)¥µÁ½ÉĞì¡…Í¡A…ÍÍİ½É°Ù•É¥™åA…ÍÍİ½Éô™É½´€œ¸½Á…ÍÍİ½Éœì)¥µÁ½ÉĞì…¹•±UÁ±½…°ÁÕÑ¡Õ¹¬°ÍÑ…ÉÑUÁ±½…°ÕÁ±½…‘MÑ…ÑÕÌô™É½´€œ¸½ÕÁ±½…‘Ìœì)¥µÁ½ÉĞìÉ•…Ñ•…ÁÑÕÉ”°É•…Ñ•±¥•¹Ğ°É•…Ñ•AÉ½©•Ğ°±¥ÍÑ…ÁÑÕÉ•Ì°±¥ÍÑ±¥•¹ÑÌ°±¥ÍÑAÉ½©•ÑÌô™É½´€œ¸½…‘µ¥¸œì)¥µÁ½ÉĞìÉ•…Ñ•5™…¡…±±•¹”°•¹…‰±•5™„°Í•ÑÕÁ5™„°Ù•É¥™å5™…1½¥¸ô™É½´€œ¸½µ™„œì)¥µÁ½ÉĞì…‘µ¥¹U¤°¥¹ÍÑ¥ÑÕÑ¥½¹…°°¥¹Ù¥Ñ…Ñ¥½¹U¤°Á½ÉÑ…±U¤°ÁÉ¥Ù…åU¤ô™É½´€œ¸½Õ¤œì)¥µÁ½ÉĞì…ÍÍ•Ñ½¹Ñ•¹Ğ°Á½ÉÑ…±AÉ½©•Ğ°Á½ÉÑ…±AÉ½©•ÑÌô™É½´€œ¸½Á½ÉÑ…°œì)¥µÁ½ÉĞì…•ÁÑ%¹Ù¥Ñ…Ñ¥½¸°É•…Ñ•A½ÉÑ…±UÍ•È°±¥ÍÑA½ÉÑ…±UÍ•ÉÌô™É½´€œ¸½ÕÍ•ÉÌœì)¥µÁ½ÉĞìÉ•…Ñ•µ‰•°•µ‰•‘ÍÍ•Ğ°•µ‰•‘A…”ô™É½´€œ¸½•µ‰•‘Ìœì)¥µÁ½ÉĞì±¥ÍÑÍÍ•ÑÌ°ÁÕ‰±¥Í¡¹Ñ¥Ñä°É•ÑÉå)½ˆ°ÑÉ…Í¡¹Ñ¥Ñäô™É½´€œ¸½±¥™•å±”œì)¥µÁ½ÉĞìÙ¥•İ•ÉA…”ô™É½´€œ¸½Ù¥•İ•ÉÌœì)¥µÁ½ÉĞì…ÕÑ¡•¹Ñ¥…Ñ•É…¹Ğ°É•…Ñ•É…¹Ğ°Í¡…É•A…”°Í¡…É•‘ÍÍ•Ğ°Í¡…É•‘AÉ½©•Ğô™É½´€œ¸½Í¡…É”œì)¥µÁ½ÉĞì¥¹Ñ•É¹…±I½ÕÑ”ô™É½´€œ¸½¥¹Ñ•É¹…°œì)¥µÁ½ÉĞì…‘µ¥¹=Ù•ÉÙ¥•Ü°±¥ÍÑ•ÍÌ°±¥ÍÑÕ‘¥Ğ°É•ÍÑ½É•¹Ñ¥Ñä°É•Ù½­••ÍÌ°ÕÁ‘…Ñ•¹Ñ¥Ñäô™É½´€œ¸½…‘µ¥¸µ½ÁÌœì)¥µÁ½ÉĞì½µÁ…É¥Í½¹A…”ô™É½´€œ¸½½µÁ…É”œì)¥µÁ½ÉĞì½Á•É…Ñ¥½¹ÍU¤ô™É½´€œ¸½½ÁÌµÕ¤œì()™Õ¹Ñ¥½¸É½ÕÑ”¡Á…Ñ èÍÑÉ¥¹œ°Á…ÑÑ•É¸èI•áÀ¤èI•áÁ5…Ñ¡ÉÉ…äğ¹Õ±°ì(€É•ÑÕÉ¸Á…Ñ ¹µ…Ñ ¡Á…ÑÑ•É¸¤ì)ô()…Íå¹Œ™Õ¹Ñ¥½¸¥Á!…Í ¡É•ÅÕ•ÍĞèI•ÅÕ•ÍĞ¤èAÉ½µ¥Í”ñÍÑÉ¥¹œøì(€É•ÑÕÉ¸Í¡„ÈÔÙ!•à¡É•ÅÕ•ÍĞ¹¡•…‘•ÉÌ¹•Ğ ˜µ½¹¹•Ñ¥¹œµ¥Àœ¤ñğ€Õ¹­¹½İ¸œ¤ì)ô()…Íå¹Œ™Õ¹Ñ¥½¸‰½½ÑÍÑÉ…À¡É•ÅÕ•ÍĞèI•ÅÕ•ÍĞ°•¹Øè¹Ø°É¥èÍÑÉ¥¹œ¤èAÉ½µ¥Í”ñI•ÍÁ½¹Í”øì(€½¹ÍĞ•á¥ÍÑ¥¹œ€ô…İ…¥Ğ•¹Ø¹¹ÁÉ•Á…É” ‰M1P¥I=4ÕÍ•ÉÌ]!IÉ½±”ô½İ¹•Èœ1%5%P€Äˆ¤¹™¥ÉÍĞ ¤ì(€¥˜€¡•á¥ÍÑ¥¹œ¤É•ÑÕÉ¸•ÉÉ½È ĞÀä°€…±É•…‘å}‰½½ÑÍÑÉ…ÁÁ•œ°€½¹Ñ„ÁÉ½ÁÉ¥•Ó…É¥„«„•á¥ÍÑ”¸œ°É¥¤ì(€½¹ÍĞÍ•É•Ğ€ôÉ•ÅÕ•ÍĞ¹¡•…‘•ÉÌ¹•Ğ …ÕÑ¡½É¥é…Ñ¥½¸œ¤ü¹É•Á±…” ½y	•…É•ÉqÌ¬½¤°€œœ¤ñğ€œœì(€¥˜€ …Í•É•Ğñğ€……İ…¥Ğ½¹ÍÑ…¹ÑQ¥µ•ÅÕ…°¡…İ…¥ĞÍ¡„ÈÔÙ!•à¡Í•É•Ğ¤°•¹Ø¹5%9}	==QMQIA}!M ¤¤ì(€€€…İ…¥Ğ…Õ‘¥Ğ¡•¹Ø°ìÉ•ÅÕ•ÍÑ%èÉ¥°…Ñ½ÉQåÁ”è€ÍåÍÑ•´œ°…Ñ¥½¸è€…ÕÑ ¹‰½½ÑÍÑÉ…Àœ°Ñ…É•ÑQåÁ”è€ÕÍ•Èœ°½ÕÑ½µ”è€‘•¹¥•œ°¥Á!…Í è…İ…¥Ğ¥Á!…Í ¡É•ÅÕ•ÍĞ¤ô¤ì(€€€É•ÑÕÉ¸•ÉÉ½È ĞÀÄ°€Õ¹…ÕÑ¡½É¥é•œ°€É•‘•¹¥…°¥¹Û…±¥‘„¸œ°É¥¤ì(€ô(€±•Ğ¥¹ÁÕĞèì•µ…¥°èÍÑÉ¥¹œì‘¥ÍÁ±…å9…µ”èÍÑÉ¥¹œìÁ…ÍÍİ½ÉèÍÑÉ¥¹œôì(€ÑÉäì¥¹ÁÕĞ€ô…İ…¥ĞÉ•…‘)Í½¸¡É•ÅÕ•ÍĞ¤ìô(€…Ñ ìÉ•ÑÕÉ¸•ÉÉ½È ĞÀÀ°€¥¹Ù…±¥‘}©Í½¸œ°€…‘½Ì¥¹Û…±¥‘½Ì¸œ°É¥¤ìô(€½¹ÍĞ•µ…¥°€ô¥¹ÁÕĞ¹•µ…¥°ü¹ÑÉ¥´ ¤¹Ñ½1½İ•É…Í” ¤ì(€½¹ÍĞ‘¥ÍÁ±…å9…µ”€ô¥¹ÁÕĞ¹‘¥ÍÁ±…å9…µ”ü¹ÑÉ¥´ ¤ì(€¥˜€ …•µ…¥°ñğ€„½yqL­qL­p¹qL¬¼¹Ñ•ÍĞ¡•µ…¥°¤ñğ€…‘¥ÍÁ±…å9…µ”ñğ‘¥ÍÁ±…å9…µ”¹±•¹Ñ €ø€ÄÀÀ¤ì(€€€É•ÑÕÉ¸•ÉÉ½È ĞÀÀ°€¥¹Ù…±¥‘}ÕÍ•Èœ°€9½µ”½Ô”µµ…¥°¥¹Û…±¥‘¼¸œ°É¥¤ì(€ô(€±•ĞÁ…ÍÍİ½É‘!…Í èÍÑÉ¥¹œì(€ÑÉäìÁ…ÍÍİ½É‘!…Í €ô…İ…¥Ğ¡…Í¡A…ÍÍİ½É¡¥¹ÁÕĞ¹Á…ÍÍİ½É¤ìô(€…Ñ ìÉ•ÑÕÉ¸•ÉÉ½È ĞÀÀ°€İ•…­}Á…ÍÍİ½Éœ°€UÍ”Õµ„Í•¹¡„½´Á•±¼µ•¹½Ì€ÄÈ…É…Ñ•É•Ì¸œ°É¥¤ìô(€½¹ÍĞ¥€ôÉåÁÑ¼¹É…¹‘½µUU% ¤ì(€…İ…¥Ğ•¹Ø¹¹ÁÉ•Á…É” (€€€€‰%9MIP%9Q<ÕÍ•ÉÌ¡¥±•µ…¥°±‘¥ÍÁ±…å}¹…µ”±É½±”±Á…ÍÍİ½É‘}¡…Í ±ÍÑ…ÑÕÌ¤Y1UL üÄ°üÈ°üÌ°½İ¹•Èœ°üĞ°…Ñ¥Ù”œ¤ˆ(€€¤¹‰¥¹¡¥°•µ…¥°°‘¥ÍÁ±…å9…µ”°Á…ÍÍİ½É‘!…Í ¤¹ÉÕ¸ ¤ì(€…İ…¥Ğ…Õ‘¥Ğ¡•¹Ø°ìÉ•ÅÕ•ÍÑ%èÉ¥°…Ñ½ÉQåÁ”è€…‘µ¥¸œ°…Ñ½É%è¥°…Ñ¥½¸è€…ÕÑ ¹‰½½ÑÍÑÉ…Àœ°Ñ…É•ÑQåÁ”è€ÕÍ•Èœ°Ñ…É•Ñ%è¥°¥Á!…Í è…İ…¥Ğ¥Á!…Í ¡É•ÅÕ•ÍĞ¤ô¤ì(€É•ÑÕÉ¸©Í½¸¡ìÕÍ•Èèì¥°•µ…¥°°‘¥ÍÁ±…å9…µ”°É½±”è€½İ¹•Èœôô°€ÈÀÄ¤ì)ô()…Íå¹Œ™Õ¹Ñ¥½¸±½¥¸¡É•ÅÕ•ÍĞèI•ÅÕ•ÍĞ°•¹Øè¹Ø°É¥èÍÑÉ¥¹œ¤èAÉ½µ¥Í”ñI•ÍÁ½¹Í”øì(€±•Ğ¥¹ÁÕĞèì•µ…¥°èÍÑÉ¥¹œìÁ…ÍÍİ½ÉèÍÑÉ¥¹œôì(€ÑÉäì¥¹ÁÕĞ€ô…İ…¥ĞÉ•…‘)Í½¸¡É•ÅÕ•ÍĞ¤ìô(€…Ñ ìÉ•ÑÕÉ¸•ÉÉ½È ĞÀÀ°€¥¹Ù…±¥‘}©Í½¸œ°€…‘½Ì¥¹Û…±¥‘½Ì¸œ°É¥¤ìô(€½¹ÍĞ•µ…¥°€ô¥¹ÁÕĞ¹•µ…¥°ü¹ÑÉ¥´ ¤¹Ñ½1½İ•É…Í” ¤ì(€½¹ÍĞ¥À€ô…İ…¥Ğ¥Á!…Í ¡É•ÅÕ•ÍĞ¤ì(€½¹ÍĞÉ…Ñ•-•ä€ô±½¥¸è‘í¥Áôè‘í•µ…¥°ñğ€¥¹Ù…±¥õ€ì(€½¹ÍĞÉ…Ñ”€ô…İ…¥Ğ•¹Ø¹¹ÁÉ•Á…É” ‰M1P…ÑÑ•µÁÑÌ±‰±½­•‘}Õ¹Ñ¥°I=4É…Ñ•}±¥µ¥ÑÌ]!I­•äôüÄˆ¤¹‰¥¹¡É…Ñ•-•ä¤¹™¥ÉÍĞñì…ÑÑ•µÁÑÌé¹Õµ‰•Èì‰±½­•‘}Õ¹Ñ¥°éÍÑÉ¥¹ñ¹Õ±°ôø ¤ì(€¥˜€¡É…Ñ”ü¹‰±½­•‘}Õ¹Ñ¥°€˜˜¹•Ü…Ñ”¡É…Ñ”¹‰±½­•‘}Õ¹Ñ¥°¤¹•ÑQ¥µ” ¤€ø…Ñ”¹¹½Ü ¤¤ì(€€€É•ÑÕÉ¸•ÉÉ½È ĞÈä°€Ñ•µÁ½É…É¥±å}‰±½­•œ°€5Õ¥Ñ…ÌÑ•¹Ñ…Ñ¥Ù…Ì¸Õ…É‘”…¹Ñ•Ì‘”Ñ•¹Ñ…È¹½Ù…µ•¹Ñ”¸œ°É¥¤ì(€ô(€½¹ÍĞÕÍ•È€ô•µ…¥°€ü…İ…¥Ğ•¹Ø¹¹ÁÉ•Á…É” (€€€€‰M1P¥±•µ…¥°±‘¥ÍÁ±…å}¹…µ”±É½±”±Á…ÍÍİ½É‘}¡…Í ±ÍÑ…ÑÕÌ±±½­•‘}Õ¹Ñ¥°±µ™…}•¹…‰±•I=4ÕÍ•ÉÌ]!I•µ…¥°ôüÄ1%5%P€Äˆ(€€¤¹‰¥¹¡•µ…¥°¤¹™¥ÉÍĞñì¥éÍÑÉ¥¹œì•µ…¥°éÍÑÉ¥¹œì‘¥ÍÁ±…å}¹…µ”éÍÑÉ¥¹œìÉ½±”è½İ¹•Èğ…‘µ¥¸ğ±¥•¹ĞœìÁ…ÍÍİ½É‘}¡…Í éÍÑÉ¥¹ñ¹Õ±°ìÍÑ…ÑÕÌéÍÑÉ¥¹œì±½n:âÚ$z{-®éÜj×thname, /^\/compare\/([0-9a-f-]{36})$/);
       if (comparison?.[1] && request.method === 'GET') return comparisonPage(env, actor, comparison[1], rid);
 
       if (!['owner','admin'].includes(actor.role)) return error(403, 'forbidden', 'VocÃª nÃ£o possui permissÃ£o administrativa.', rid);

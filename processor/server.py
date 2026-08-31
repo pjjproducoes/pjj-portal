@@ -48,7 +48,7 @@ def detected_kind(path,declared):
     if mime=='application/pdf':return 'pdf',mime
     return declared,mime
 
-def process(job):
+def process(job,token_provider=None):
     required=['accessToken','inputFileId','outputFolderId','assetId','type','originalName']
     if any(not job.get(k) for k in required):raise ValueError('missing_job_field')
     with tempfile.TemporaryDirectory(prefix='pjj-') as tmp:
@@ -89,7 +89,8 @@ def process(job):
       else:raise ValueError('unsupported_asset_type')
       variants=[]
       for variant,path,mime in outputs:
-        result=upload(path,job['accessToken'],job['outputFolderId'],path.name,mime,{'pjjManaged':'true','assetId':job['assetId'],'variantType':variant})
+        upload_token=token_provider() if token_provider else job['accessToken']
+        result=upload(path,upload_token,job['outputFolderId'],path.name,mime,{'pjjManaged':'true','assetId':job['assetId'],'variantType':variant})
         variants.append({'type':variant,'driveFileId':result['id'],'format':path.suffix.lstrip('.'),'mimeType':mime,'sizeBytes':path.stat().st_size,'sha256':sha256(path)})
       return {'metadata':metadata,'variants':variants}
 

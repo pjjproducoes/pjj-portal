@@ -1,7 +1,7 @@
 import type { Env } from './env';
 import type { Principal } from './auth';
 import { streamFile } from './drive';
-import { error, json } from './http';
+import { error, json, safeInlineMime } from './http';
 import { audit } from './audit';
 
 function canManage(actor: Principal): boolean { return actor.role === 'owner' || actor.role === 'admin'; }
@@ -62,7 +62,7 @@ export async function assetContent(request: Request, env: Env, actor: Principal,
   const upstream = await streamFile(env, fileId, request.headers.get('range'));
   if (!upstream.ok && upstream.status !== 206) return error(502, 'drive_stream_failed', 'Não foi possível transmitir o arquivo.', rid);
   const responseMime = variant ? row.variant_mime_type || 'application/octet-stream' : row.mime_type || 'application/octet-stream';
-  const safeInline = /^(image\/(jpeg|png|webp)|video\/mp4|application\/pdf|model\/gltf-binary)$/.test(responseMime);
+  const safeInline = safeInlineMime(responseMime);
   const headers = new Headers({
     'content-type': responseMime,
     'cache-control': 'private, no-store', 'accept-ranges': 'bytes', 'x-content-type-options': 'nosniff',

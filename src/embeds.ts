@@ -3,7 +3,7 @@ import type { Principal } from './auth';
 import { audit } from './audit';
 import { randomToken, sha256Hex } from './crypto';
 import { streamFile } from './drive';
-import { error, html, json, readJson } from './http';
+import { error, html, json, readJson, safeInlineMime } from './http';
 
 export function hostname(value:string|null):string|null { try{return value?new URL(value).hostname.toLowerCase():null}catch{return null} }
 function requestHost(request:Request):string|null{return hostname(request.headers.get('origin'))||hostname(request.headers.get('referer'))}
@@ -51,6 +51,6 @@ export async function embedAsset(request:Request,env:Env,token:string,assetId:st
   const row=await env.DB.prepare("SELECT original_drive_file_id,mime_type,original_name FROM assets WHERE id=?1 AND project_id=?2 AND status='published'").bind(assetId,embed.project_id).first<{original_drive_file_id:string|null;mime_type:string|null;original_name:string}>();
   const typeRow=await env.DB.prepare("SELECT type FROM assets WHERE id=?1").bind(assetId).first<{type:string}>();if(allowed.length&&!allowed.includes(assetId)&&!allowed.includes(typeRow?.type||''))return error(403,'product_denied','Este produto não está liberado no embed.',rid);
   if(!row?.original_drive_file_id)return error(404,'asset_not_found','Arquivo não encontrado.',rid);const upstream=await streamFile(env,row.original_drive_file_id,request.headers.get('range'));if(!upstream.ok&&upstream.status!==206)return error(502,'drive_stream_failed','Falha ao transmitir.',rid);
-  const headers=new Headers({'content-type':row.mime_type||'application/octet-stream','cache-control':'private, no-store','accept-ranges':'bytes','x-content-type-options':'nosniff'});for(const h of ['content-length','content-range']){const v=upstream.headers.get(h);if(v)headers.set(h,v)}await audit(env,{requestId:rid,actorType:'embed',actorId:embed.id,action:'asset.viewed',targetType:'asset',targetId:assetId,metadata:{host:requestHost(request)}});return new Response(upstream.body,{status:upstream.status,headers});
+  const mime=row.mime_type||'application/octet-stream',headers=new Headers({'content-type':mime,'cache-control':'private, no-store','accept-ranges':'bytes','content-disposition':`${safeInlineMime(mime)?'inline':'attachment'}; filename*=UTF-8''${encodeURIComponent(row.original_name)}`,'content-security-policy':"sandbox; default-src 'none'",'x-content-type-options':'nosniff'});for(const h of ['content-length','content-range','etag','last-modified']){const v=upstream.headers.get(h);if(v)headers.set(h,v)}await audit(env,{requestId:rid,actorType:'embed',actorId:embed.id,action:'asset.viewed',targetType:'asset',targetId:assetId,metadata:{host:requestHost(request)}});return new Response(upstream.body,{status:upstream.status,headers});
 }
 function escapeHtml(v:unknown):string{return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!))}

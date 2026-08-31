@@ -48,6 +48,10 @@ export function clearSessionCookie(): string {
   return 'pjj_session=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0';
 }
 
+export function safeInlineMime(value: string): boolean {
+  return /^(image\/(jpeg|png|webp|gif)|video\/(mp4|webm)|audio\/(mpeg|mp4|ogg)|application\/pdf|model\/gltf-binary)$/.test(value.toLowerCase());
+}
+
 export async function readJson<T>(request: Request, maxBytes = 64 * 1024): Promise<T> {
   const length = Number(request.headers.get('content-length') || 0);
   if (length > maxBytes) throw new Error('payload_too_large');

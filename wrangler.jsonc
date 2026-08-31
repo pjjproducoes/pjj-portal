@@ -32,8 +32,8 @@
       ],
       "vars": {
         "ENVIRONMENT": "staging",
-        "DRIVE_ROOT_FOLDER_ID": "1sVA2TzVvAQ4mRGSzU6PvXF5vbIFspAvz",
-        "PUBLIC_ORIGIN": "https://staging.pjj.invalid"
+        "DRIVE_ROOT_FOLDER_ID": "1PaaWeSiXZuMrpcOeJB2Vgx4QNC1Nvst0",
+        "PUBLIC_ORIGIN": "https://pjj-portal-staging.contato-pjjproducoes.workers.dev"
       }
     },
     "production": {
