@@ -49,7 +49,7 @@ export async function createClient(request: Request, env: Env, actor: Principal,
      VALUES(?1,?2,?3,?4,?5,?6,?7,?8)`
   ).bind(
     id, name, clean(input.legalName, 200), clean(input.primaryContactName, 120),
-    clean(input.email, 254)?.toLowerCase(), clean(input.phone, 40), clean(input.notes, 4000), clientFolder
+    clean(input.email, 254)?.toLowerCase() ?? null, clean(input.phone, 40) ?? null, clean(input.notes, 4000) ?? null, clientFolder
   ).run();
   await audit(env, { requestId: rid, actorType: 'admin', actorId: actor.userId, action: 'client.created', targetType: 'client', targetId: id });
   return json({ client: { id, name, status: 'active', driveFolderReady: true } }, 201);
@@ -90,7 +90,7 @@ export async function createProject(request: Request, env: Env, actor: Principal
   await env.DB.prepare(
     `INSERT INTO projects(id,client_id,name,slug,description,location_text,drive_folder_id)
      VALUES(?1,?2,?3,?4,?5,?6,?7)`
-  ).bind(id, clientId, name, projectSlug, clean(input.description, 5000), clean(input.location, 300), projectFolder).run();
+  ).bind(id, clientId, name, projectSlug, clean(input.description, 5000) ?? null, clean(input.location, 300) ?? null, projectFolder).run();
   await audit(env, { requestId: rid, actorType: 'admin', actorId: actor.userId, action: 'project.created', targetType: 'project', targetId: id });
   return json({ project: { id, clientId, name, slug: projectSlug, status: 'draft', driveFolderReady: true } }, 201);
 }
@@ -130,4 +130,3 @@ export async function createCapture(request: Request, env: Env, actor: Principal
   await audit(env, { requestId: rid, actorType: 'admin', actorId: actor.userId, action: 'capture.created', targetType: 'capture', targetId: id });
   return json({ capture: { id, projectId, capturedAt: new Date(capturedAt).toISOString(), status: 'draft', driveFolderReady: true } }, 201);
 }
-
