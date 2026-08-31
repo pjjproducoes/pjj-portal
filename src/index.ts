@@ -110,10 +110,10 @@ export default {
     const rid = requestId(request);
     const url = new URL(request.url);
     try {
-      if (request.method === 'GET' && url.pathname === '/') return institutional();
-      if (request.method === 'GET' && (url.pathname === '/admin' || url.pathname === '/admin/')) return adminUi();
-      if (request.method === 'GET' && url.pathname === '/admin/operations') return operationsUi();
-      if (request.method === 'GET' && (url.pathname === '/portal' || url.pathname === '/portal/')) return portalUi();
+      if (['GET','HEAD'].includes(request.method) && url.pathname === '/') return institutional();
+      if (['GET','HEAD'].includes(request.method) && (url.pathname === '/admin' || url.pathname === '/admin/')) return adminUi();
+      if (['GET','HEAD'].includes(request.method) && url.pathname === '/admin/operations') return operationsUi();
+      if (['GET','HEAD'].includes(request.method) && (url.pathname === '/portal' || url.pathname === '/portal/')) return portalUi();
       const invitePage = route(url.pathname, /^\/invite\/([A-Za-z0-9_-]{40,64})$/);
       if (invitePage?.[1] && request.method === 'GET') return invitationUi(invitePage[1]);
       if (request.method === 'GET' && url.pathname === '/api/health') {
