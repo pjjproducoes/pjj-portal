@@ -52,6 +52,13 @@ export async function internalRoute(request: Request, env: Env, rid: string): Pr
     return json(job);
   }
 
+  if (path === '/api/internal/backup' && request.method === 'POST') {
+    const tables=['schema_migrations','clients','projects','captures','users','project_members','assets','asset_variants','processing_jobs','embeds','embed_domains','access_grants','invitations','mfa_recovery_codes','audit_logs'];
+    const data:Record<string,unknown[]>={};
+    for(const table of tables){const result=await env.DB.prepare(`SELECT * FROM ${table}`).all();data[table]=result.results}
+    return json({format:'pjj-d1-backup-v1',createdAt:new Date().toISOString(),environment:env.ENVIRONMENT,tables:data});
+  }
+
   const match = path.match(/^\/api\/internal\/jobs\/([0-9a-f-]{36})\/(heartbeat|complete|fail)$/);
   if (!match || request.method !== 'POST') return error(404, 'not_found', 'Rota interna não encontrada.', rid);
   const [, jobId, action] = match;
