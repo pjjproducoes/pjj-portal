@@ -19,7 +19,7 @@ function base64Url(input: string | Uint8Array): string {
 
 async function accessToken(env: Env): Promise<string> {
   if (cachedToken && cachedToken.expiresAt > Date.now() + 60_000) return cachedToken.token;
-  const cacheKey=env.DRIVE_OAUTH_REFRESH_TOKEN?'user_oauth':'service_account';
+  const cacheKey=env.DRIVE_SERVICE_ACCOUNT_JSON?'service_account':'user_oauth';
   const shared = await env.DB.prepare("SELECT token_ciphertext,expires_at FROM drive_oauth_cache WHERE cache_key=?1 AND expires_at>datetime('now','+2 minutes')").bind(cacheKey)
     .first<{token_ciphertext:string;expires_at:string}>();
   if (shared) {
