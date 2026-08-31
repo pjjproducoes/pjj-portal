@@ -7,7 +7,7 @@ import { hashPassword, verifyPassword } from './password';
 import { cancelUpload, putChunk, startUpload, uploadStatus } from './uploads';
 import { createCapture, createClient, createProject, listCaptures, listClients, listProjects } from './admin';
 import { createMfaChallenge, enableMfa, setupMfa, verifyMfaLogin } from './mfa';
-import { adminUi, institutional, invitationUi, portalUi } from './ui';
+import { adminUi, institutional, invitationUi, portalUi, privacyUi } from './ui';
 import { assetContent, portalProject, portalProjects } from './portal';
 import { acceptInvitation, createPortalUser, listPortalUsers } from './users';
 import { createEmbed, embedAsset, embedPage } from './embeds';
@@ -111,6 +111,7 @@ export default {
     const url = new URL(request.url);
     try {
       if (['GET','HEAD'].includes(request.method) && url.pathname === '/') return institutional();
+      if (['GET','HEAD'].includes(request.method) && (url.pathname === '/privacidade' || url.pathname === '/privacy')) return privacyUi();
       if (['GET','HEAD'].includes(request.method) && (url.pathname === '/admin' || url.pathname === '/admin/')) return adminUi();
       if (['GET','HEAD'].includes(request.method) && url.pathname === '/admin/operations') return operationsUi();
       if (['GET','HEAD'].includes(request.method) && (url.pathname === '/portal' || url.pathname === '/portal/')) return portalUi();
