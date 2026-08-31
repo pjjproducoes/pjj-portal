@@ -1,0 +1,48 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pjj-portal-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-31",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "invocation_logs": true }
+  },
+  "vars": {
+    "ENVIRONMENT": "development",
+    "DRIVE_ROOT_FOLDER_ID": "1sVA2TzVvAQ4mRGSzU6PvXF5vbIFspAvz",
+    "PUBLIC_ORIGIN": "http://localhost:8787"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "pjj-portal-dev",
+      "database_id": "local"
+    }
+  ],
+  "env": {
+    "staging": {
+      "name": "pjj-portal-staging",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "pjj-portal-staging",
+          "database_id": "416f5113-345b-454c-b7a4-776922aaf5fe"
+        }
+      ],
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "DRIVE_ROOT_FOLDER_ID": "1sVA2TzVvAQ4mRGSzU6PvXF5vbIFspAvz",
+        "PUBLIC_ORIGIN": "https://staging.pjj.invalid"
+      }
+    },
+    "production": {
+      "name": "pjj-portal",
+      "vars": {
+        "ENVIRONMENT": "production",
+        "DRIVE_ROOT_FOLDER_ID": "1sVA2TzVvAQ4mRGSzU6PvXF5vbIFspAvz",
+        "PUBLIC_ORIGIN": "https://pjjproducoes.github.io"
+      }
+    }
+  }
+}

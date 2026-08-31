@@ -1,146 +1,44 @@
-# PJJ Produções — Site PRO
+# PJJ Portal
 
-Esta versão mantém o site público e acrescenta um painel administrativo estático.
+Produto digital da PJJ Produções para site institucional, administração, portal privado, entrega B2B/B2B2C e visualizadores técnicos.
 
-## Arquivos principais
+## Princípios fixos
 
-- `index.html` — site público
-- `style.css` — visual do site
-- `script.js` — interações do site
-- `config.js` — dados alterados com frequência
-- `content.js` — textos e portfólio
-- `analytics.js` — registro opcional de visitas/interações
-- `assets/portfolio/` — fotos do portfólio
-- `painel/` — painel administrativo
-- `supabase-analytics.sql` — banco opcional para métricas
+- Google Drive privado é o armazenamento persistente e fonte de verdade.
+- Cloudflare controla aplicação, D1, autenticação, autorização, processamento, cache e entrega.
+- Não existe integração com computador, agente Windows ou WebODM local.
+- Nenhum asset privado depende de link público do Drive.
+- Staging é validado antes de produção.
+- A logo original não é redesenhada.
 
-## Configurações frequentes
+Segredos ficam apenas em bindings secretos da Cloudflare e nunca no repositório.
 
-Edite `config.js`.
+## Componentes
 
-Ali ficam:
-- Instagram
-- WhatsApp
-- mensagem automática
-- e-mail
-- localização
-- CNPJ
-- senha simples do painel
-- configuração de analytics
+- `src/`: Worker modular, site, admin, portal, autenticação, MFA, uploads, autorização, embeds e viewers.
+- `migrations/`: esquema D1 versionado.
+- `processor/`: imagem do container com GDAL, PDAL, Assimp e glTF Transform.
+- `processing/`: orquestrador de Containers/Workflows, mantido separado até a ativação do plano compatível.
+- `test/`: testes automatizados de criptografia, senha e TOTP.
 
-## Senha do painel
+## Fluxos implementados
 
-A senha inicial é:
+- sessão `HttpOnly`, CSRF, expiração absoluta e por inatividade, vínculo ao navegador e revogação;
+- senha PBKDF2, bloqueio progressivo, MFA TOTP e códigos de recuperação;
+- clientes → projetos → captações com pastas identificadas por ID no Drive;
+- upload resumível em chunks de 8 MiB, checksum, detecção de duplicidade, progresso e retry;
+- estados persistidos de asset e processamento, publicação explícita e reprocessamento;
+- acesso por usuário/projeto e streaming privado com `Range`;
+- embed com token, expiração, revogação, domínio permitido e `frame-ancestors`;
+- viewer autorizado para COG, GLB, imagens, vídeos e documentos;
+- exclusão recuperável no banco e na lixeira do Drive;
+- trilha de auditoria para operações sensíveis.
 
-`ALTERE-ESTA-SENHA`
+## Verificação local
 
-Troque em `config.js` antes de publicar.
+```sh
+npm ci
+npm run check
+```
 
-### Limitação importante
-
-Como GitHub Pages é hospedagem estática, essa senha é uma barreira visual,
-não segurança real. O arquivo `config.js` é público e um usuário técnico pode
-inspecionar ou contornar o bloqueio.
-
-Para um painel realmente privado, será necessário autenticação externa
-(Supabase Auth, Cloudflare Access ou similar).
-
-## Painel
-
-Depois de publicar:
-
-`/painel/`
-
-Exemplo:
-
-`https://SEU-USUARIO.github.io/site/painel/`
-
-O painel permite:
-- editar dados frequentes;
-- trocar a senha simples;
-- adicionar/remover/reordenar projetos;
-- adicionar fotos;
-- comprimir fotos automaticamente;
-- gerar ZIP de atualização;
-- visualizar visitas e cliques quando analytics estiver configurado.
-
-## Fotos separadas
-
-As fotos não ficam mais embutidas em JavaScript.
-
-Elas são exportadas para:
-
-`assets/portfolio/`
-
-O `content.js` guarda apenas o caminho da imagem.
-
-## Analytics
-
-GitHub Pages sozinho não consegue persistir contadores.
-
-Esta versão tem integração opcional com Supabase.
-
-1. Crie um projeto Supabase.
-2. Abra SQL Editor.
-3. Execute `supabase-analytics.sql`.
-4. Copie Project URL e anon public key.
-5. Preencha `config.js`:
-   - `analytics.enabled: true`
-   - `supabaseUrl`
-   - `supabaseAnonKey`
-
-Eventos registrados:
-- `page_view`
-- `whatsapp_click`
-- `instagram_click`
-- `email_click`
-- `portfolio_open`
-
-Não há coleta explícita de nome, telefone, e-mail ou IP pelo código do site.
-
-### Privacidade das métricas
-
-O SQL incluído permite leitura das métricas com a chave pública para que o painel
-estático consiga exibir os números. Portanto os dados agregados não devem ser
-tratados como informação secreta.
-
-## Publicar atualizações pelo painel
-
-No painel, abra **Publicar** e clique em:
-
-`Baixar pacote de atualização`
-
-O ZIP terá:
-- `config.js`
-- `content.js`
-- novas fotos em `assets/portfolio/`
-
-Extraia o ZIP e substitua esses arquivos no GitHub.
-
-## Celular
-
-O site público e o painel possuem layout responsivo para celulares.
-
-
-## Formulário de contato
-
-O site usa FormSubmit para encaminhar mensagens para o e-mail configurado em `config.js`.
-
-E-mail inicial:
-`contato.pjjproducoes@gmail.com`
-
-Na primeira tentativa de envio, o FormSubmit envia uma mensagem de confirmação para esse e-mail.
-É necessário confirmar uma vez para o formulário começar a encaminhar normalmente.
-
-O visitante preenche e envia dentro do próprio site; o JavaScript usa o endpoint AJAX do FormSubmit.
-
-## Imagem principal
-
-A imagem grande do topo agora pode ser alterada em:
-
-`Painel > Conteúdo > Imagem principal`
-
-Ela é exportada para:
-`assets/site/hero.jpg`
-
-Se nenhuma imagem estiver configurada, o site mostra a composição tipográfica PJJ.
+O deploy ativo de desenvolvimento é o Worker `pjj-portal-staging`, ligado ao D1 `pjj-portal-staging`. O arquivo `wrangler.processing.example.jsonc` documenta os bindings de processamento que só podem ser ativados quando Containers estiver disponível na conta.

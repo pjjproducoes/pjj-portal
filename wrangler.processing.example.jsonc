@@ -1,0 +1,12 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pjj-portal-processing",
+  "main": "src/processing-worker.ts",
+  "compatibility_date": "2026-08-31",
+  "compatibility_flags": ["nodejs_compat"],
+  "containers": [{ "class_name": "GeoProcessor", "image": "./processor/Dockerfile", "instances": 1 }],
+  "durable_objects": { "bindings": [{ "class_name": "GeoProcessor", "name": "GEO_PROCESSOR" }] },
+  "migrations": [{ "new_sqlite_classes": ["GeoProcessor"], "tag": "processing-v1" }],
+  "workflows": [{ "name": "pjj-processing-workflow", "binding": "PROCESSING_WORKFLOW", "class_name": "ProcessingWorkflow" }],
+  "d1_databases": [{ "binding": "DB", "database_name": "pjj-portal-staging", "database_id": "416f5113-345b-454c-b7a4-776922aaf5fe" }]
+}
