@@ -15,4 +15,7 @@ metadata=json.dumps({'name':name,'parents':[os.environ['DRIVE_ROOT_FOLDER_ID']],
 body=(b'--'+boundary.encode()+b'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+metadata+
       b'\r\n--'+boundary.encode()+b'\r\nContent-Type: application/json\r\n\r\n'+backup+b'\r\n--'+boundary.encode()+b'--')
 upload=urllib.request.Request('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',data=body,method='POST',headers={'authorization':'Bearer '+access_token,'content-type':'multipart/related; boundary='+boundary})
-with urllib.request.urlopen(upload,timeout=120) as response: print(response.read().decode())
+try:
+    with urllib.request.urlopen(upload,timeout=120) as response: print(response.read().decode())
+except urllib.error.HTTPError as error:
+    raise RuntimeError(f'drive_backup_upload_{error.code}_{error.read().decode()[:1000]}')
