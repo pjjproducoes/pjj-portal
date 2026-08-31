@@ -7,12 +7,13 @@ import { hashPassword, verifyPassword } from './password';
 import { cancelUpload, putChunk, startUpload, uploadStatus } from './uploads';
 import { createCapture, createClient, createProject, listCaptures, listClients, listProjects } from './admin';
 import { createMfaChallenge, enableMfa, setupMfa, verifyMfaLogin } from './mfa';
-import { adminUi, institutional, portalUi } from './ui';
+import { adminUi, institutional, invitationUi, portalUi } from './ui';
 import { assetContent, portalProject, portalProjects } from './portal';
-import { createPortalUser, listPortalUsers } from './users';
+import { acceptInvitation, createPortalUser, listPortalUsers } from './users';
 import { createEmbed, embedAsset, embedPage } from './embeds';
 import { listAssets, publishEntity, retryJob, trashEntity } from './lifecycle';
 import { viewerPage } from './viewers';
+import { authenticateGrant, createGrant, sharePage, sharedAsset, sharedProject } from './share';
 
 function route(path: string, pattern: RegExp): RegExpMatchArray | null {
   return path.match(pattern);
@@ -107,12 +108,21 @@ export default {
       if (request.method === 'GET' && url.pathname === '/') return institutional();
       if (request.method === 'GET' && (url.pathname === '/admin' || url.pathname === '/admin/')) return adminUi();
       if (request.method === 'GET' && (url.pathname === '/portal' || url.pathname === '/portal/')) return portalUi();
+      const invitePage = route(url.pathname, /^\/invite\/([A-Za-z0-9_-]{40,64})$/);
+      if (invitePage?.[1] && request.method === 'GET') return invitationUi(invitePage[1]);
       if (request.method === 'GET' && url.pathname === '/api/health') {
         return json({ ok: true, environment: env.ENVIRONMENT, storage: 'google-drive', requestId: rid });
       }
       if (request.method === 'POST' && url.pathname === '/api/auth/bootstrap') return bootstrap(request, env, rid);
       if (request.method === 'POST' && url.pathname === '/api/auth/login') return login(request, env, rid);
       if (request.method === 'POST' && url.pathname === '/api/auth/mfa/verify-login') return verifyMfaLogin(request, env, rid);
+      if (request.method === 'POST' && url.pathname === '/api/auth/accept-invite') return acceptInvitation(request, env, rid);
+      const share = route(url.pathname, /^\/share\/([A-Za-z0-9_-]{40,64})$/);
+      if (share?.[1] && request.method === 'GET') return sharePage(share[1]);
+      if (url.pathname === '/api/share/auth' && request.method === 'POST') return authenticateGrant(request, env, rid);
+      if (url.pathname === '/api/share/project' && request.method === 'GET') return sharedProject(request, env, rid);
+      const shareAsset = route(url.pathname, /^\/api\/share\/assets\/([0-9a-f-]{36})\/content$/);
+      if (shareAsset?.[1] && ['GET','HEAD'].includes(request.method)) return sharedAsset(request, env, shareAsset[1], rid);
       const publicEmbed = route(url.pathname, /^\/embed\/([A-Za-z0-9_-]{40,64})$/);
       if (publicEmbed?.[1] && request.method === 'GET') return embedPage(request, env, publicEmbed[1], rid);
       const publicEmbedAsset = route(url.pathname, /^\/api\/embed\/([A-Za-z0-9_-]{40,64})\/assets\/([0-9a-f-]{36})\/content$/);
@@ -148,6 +158,7 @@ export default {
       if (url.pathname === '/api/admin/users' && request.method === 'GET') return listPortalUsers(env);
       if (url.pathname === '/api/admin/users' && request.method === 'POST') return createPortalUser(request, env, actor, rid);
       if (url.pathname === '/api/admin/embeds' && request.method === 'POST') return createEmbed(request, env, actor, rid);
+      if (url.pathname === '/api/admin/grants' && request.method === 'POST') return createGrant(request, env, actor, rid);
       if (url.pathname === '/api/admin/assets' && request.method === 'GET') return listAssets(env, url);
       const publish = route(url.pathname, /^\/api\/admin\/(projects|captures|assets)\/([0-9a-f-]{36})\/publish$/);
       if (publish?.[1] && publish[2] && request.method === 'POST') return publishEntity(env, actor, publish[1].slice(0,-1) as 'project'|'capture'|'asset', publish[2], rid);

@@ -1,4 +1,5 @@
 import type { Env } from './env';
+import { decrypt, encrypt } from './crypto';
 
 interface ServiceAccount {
   client_email: string;
@@ -18,6 +19,12 @@ function base64Url(input: string | Uint8Array): string {
 
 async function accessToken(env: Env): Promise<string> {
   if (cachedToken && cachedToken.expiresAt > Date.now() + 60_000) return cachedToken.token;
+  const shared = await env.DB.prepare("SELECT token_ciphertext,expires_at FROM drive_oauth_cache WHERE cache_key='service_account' AND expires_at>datetime('now','+2 minutes')")
+    .first<{token_ciphertext:string;expires_at:string}>();
+  if (shared) {
+    const token = await decrypt(shared.token_ciphertext,env.DATA_ENCRYPTION_KEY);
+    cachedToken={token,expiresAt:new Date(shared.expires_at.replace(' ','T')+'Z').getTime()};return token;
+  }
   const account = JSON.parse(env.DRIVE_SERVICE_ACCOUNT_JSON) as ServiceAccount;
   const now = Math.floor(Date.now() / 1000);
   const header = base64Url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
@@ -48,6 +55,9 @@ async function accessToken(env: Env): Promise<string> {
   if (!response.ok) throw new Error(`drive_auth_${response.status}`);
   const result = await response.json<{ access_token: string; expires_in: number }>();
   cachedToken = { token: result.access_token, expiresAt: Date.now() + result.expires_in * 1000 };
+  await env.DB.prepare(`INSERT INTO drive_oauth_cache(cache_key,token_ciphertext,expires_at) VALUES('service_account',?1,datetime('now',?2))
+    ON CONFLICT(cache_key) DO UPDATE SET token_ciphertext=excluded.token_ciphertext,expires_at=excluded.expires_at,updated_at=CURRENT_TIMESTAMP`)
+    .bind(await encrypt(result.access_token,env.DATA_ENCRYPTION_KEY),`+${Math.max(60,result.expires_in-30)} seconds`).run();
   return result.access_token;
 }
 

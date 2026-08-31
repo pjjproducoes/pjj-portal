@@ -30,6 +30,8 @@ Segredos ficam apenas em bindings secretos da Cloudflare e nunca no repositório
 - estados persistidos de asset e processamento, publicação explícita e reprocessamento;
 - acesso por usuário/projeto e streaming privado com `Range`;
 - embed com token, expiração, revogação, domínio permitido e `frame-ancestors`;
+- convite de uso único para o cliente definir a própria senha;
+- compartilhamento B2B2C com PIN opcional, validade, limite de acessos e permissão;
 - viewer autorizado para COG, GLB, imagens, vídeos e documentos;
 - exclusão recuperável no banco e na lixeira do Drive;
 - trilha de auditoria para operações sensíveis.
