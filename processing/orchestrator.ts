@@ -25,6 +25,7 @@ export class ProcessingWorkflow extends WorkflowEntrypoint<ProcessingEnv,{jobId:
         WHERE j.id=?1 AND j.status IN ('queued','retrying')`).bind(event.payload.jobId).first<any>();if(!row)throw new Error('job_not_claimable');
       await this.env.DB.prepare("UPDATE processing_jobs SET status='running',attempt=attempt+1,started_at=CURRENT_TIMESTAMP,heartbeat_at=CURRENT_TIMESTAMP,progress=5 WHERE id=?1").bind(row.id).run();return row;
     });
+    try {
     const output=await step.do('convert and validate',{retries:{limit:2,delay:'30 seconds',backoff:'exponential'},timeout:'6 hours'},async()=>{
       const instance=getContainer(this.env.GEO_PROCESSOR,job.asset_id),accessToken=await driveToken(this.env);
       const response=await instance.fetch(new Request('http://processor/process',{method:'POST',headers:{authorization:`Bearer ${this.env.PROCESSOR_INTERNAL_TOKEN}`,'content-type':'application/json'},body:JSON.stringify({accessToken,inputFileId:job.original_drive_file_id,outputFolderId:job.capture_folder||job.project_folder,assetId:job.asset_id,type:job.type,originalName:job.original_name})}));
@@ -36,6 +37,14 @@ export class ProcessingWorkflow extends WorkflowEntrypoint<ProcessingEnv,{jobId:
       statements.push(this.env.DB.prepare("UPDATE assets SET status='review',metadata_json=?2,error_code=NULL,error_message=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?1").bind(job.asset_id,JSON.stringify(output.metadata)));
       statements.push(this.env.DB.prepare("UPDATE processing_jobs SET status='succeeded',progress=100,finished_at=CURRENT_TIMESTAMP,output_json=?2 WHERE id=?1").bind(job.id,JSON.stringify(output)));await this.env.DB.batch(statements);
     });return{jobId:job.id,assetId:job.asset_id,status:'review'};
+    } catch (caught) {
+      const message=caught instanceof Error?caught.message:'processing_failed';
+      await this.env.DB.batch([
+        this.env.DB.prepare("UPDATE processing_jobs SET status='failed',error_code='processing_failed',error_message=?2,finished_at=CURRENT_TIMESTAMP WHERE id=?1").bind(job.id,message.slice(0,2000)),
+        this.env.DB.prepare("UPDATE assets SET status='failed',error_code='processing_failed',error_message=?2,updated_at=CURRENT_TIMESTAMP WHERE id=?1").bind(job.asset_id,message.slice(0,2000))
+      ]);
+      throw caught;
+    }
   }
 }
 

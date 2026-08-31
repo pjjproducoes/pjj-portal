@@ -41,6 +41,8 @@ def process(job):
       kind=job['type']; outputs=[]; metadata={'inputSha256':sha256(original),'inputBytes':original.stat().st_size}
       if kind in ('orthophoto','dsm','dtm'):
         info=json.loads(run('gdalinfo','-json',str(original)));metadata['gdal']=info
+        if not info.get('coordinateSystem') or not (info.get('geoTransform') or info.get('gcps')):
+          raise ValueError('geotiff_missing_georeferencing')
         cog=pathlib.Path(tmp)/(original.stem+'.cog.tif')
         run('gdal_translate','-of','COG','-co','COMPRESS=DEFLATE','-co','BIGTIFF=IF_SAFER',str(original),str(cog))
         outputs.append(('cog',cog,'image/tiff'))
