@@ -26,7 +26,7 @@ async function accessToken(env: Env): Promise<string> {
     const token = await decrypt(shared.token_ciphertext,env.DATA_ENCRYPTION_KEY);
     cachedToken={token,expiresAt:new Date(shared.expires_at.replace(' ','T')+'Z').getTime()};return token;
   }
-  if(env.DRIVE_OAUTH_REFRESH_TOKEN&&env.DRIVE_OAUTH_CLIENT_ID&&env.DRIVE_OAUTH_CLIENT_SECRET){
+  if(!env.DRIVE_SERVICE_ACCOUNT_JSON&&env.DRIVE_OAUTH_REFRESH_TOKEN&&env.DRIVE_OAUTH_CLIENT_ID&&env.DRIVE_OAUTH_CLIENT_SECRET){
     const response=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:env.DRIVE_OAUTH_CLIENT_ID,client_secret:env.DRIVE_OAUTH_CLIENT_SECRET,refresh_token:env.DRIVE_OAUTH_REFRESH_TOKEN,grant_type:'refresh_token'})});
     if(response.ok){
       const result=await response.json<{access_token:string;expires_in:number}>();cachedToken={token:result.access_token,expiresAt:Date.now()+result.expires_in*1000};
@@ -158,11 +158,3 @@ export async function ensureFolder(env: Env, input: {
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json; charset=UTF-8' },
     body: JSON.stringify({
       name: input.name.slice(0, 200),
-      mimeType: 'application/vnd.google-apps.folder',
-      parents: [input.parentId],
-      appProperties: { pjjManaged: 'true', pjjEntityType: input.entityType, pjjEntityId: input.entityId }
-    })
-  });
-  if (!created.ok) throw new Error(`drive_folder_create_${created.status}`);
-  return (await created.json<{ id: string }>()).id;
-}
