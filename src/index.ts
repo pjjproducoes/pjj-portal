@@ -14,6 +14,7 @@ import { createEmbed, embedAsset, embedPage } from './embeds';
 import { listAssets, publishEntity, retryJob, trashEntity } from './lifecycle';
 import { viewerPage } from './viewers';
 import { authenticateGrant, createGrant, sharePage, sharedAsset, sharedProject } from './share';
+import { internalRoute } from './internal';
 
 function route(path: string, pattern: RegExp): RegExpMatchArray | null {
   return path.match(pattern);
@@ -113,6 +114,7 @@ export default {
       if (request.method === 'GET' && url.pathname === '/api/health') {
         return json({ ok: true, environment: env.ENVIRONMENT, storage: 'google-drive', requestId: rid });
       }
+      if (url.pathname.startsWith('/api/internal/')) return internalRoute(request, env, rid);
       if (request.method === 'POST' && url.pathname === '/api/auth/bootstrap') return bootstrap(request, env, rid);
       if (request.method === 'POST' && url.pathname === '/api/auth/login') return login(request, env, rid);
       if (request.method === 'POST' && url.pathname === '/api/auth/mfa/verify-login') return verifyMfaLogin(request, env, rid);

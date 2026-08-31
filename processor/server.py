@@ -85,4 +85,5 @@ class Handler(BaseHTTPRequestHandler):
     except Exception as e:self.reply(500,{'error':type(e).__name__,'detail':str(e)[:1000]})
   def log_message(self,fmt,*args):print(json.dumps({'remote':self.client_address[0],'message':fmt%args}))
 
-ThreadingHTTPServer(('0.0.0.0',PORT),Handler).serve_forever()
+if __name__=='__main__':
+  ThreadingHTTPServer(('0.0.0.0',PORT),Handler).serve_forever()

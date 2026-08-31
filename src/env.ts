@@ -8,4 +8,3 @@ export interface Env {
   DATA_ENCRYPTION_KEY: string;
   ADMIN_BOOTSTRAP_HASH: string;
 }
-

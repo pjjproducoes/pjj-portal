@@ -17,8 +17,9 @@ Segredos ficam apenas em bindings secretos da Cloudflare e nunca no repositório
 
 - `src/`: Worker modular, site, admin, portal, autenticação, MFA, uploads, autorização, embeds e viewers.
 - `migrations/`: esquema D1 versionado.
-- `processor/`: imagem do container com GDAL, PDAL, Assimp e glTF Transform.
-- `processing/`: orquestrador de Containers/Workflows, mantido separado até a ativação do plano compatível.
+- `processor/`: processador único com GDAL, PDAL, Assimp e glTF Transform.
+- `.github/workflows/process-assets.yml`: executor gratuito inicial, com fila real e renovação segura do token do Drive.
+- `processing/`: adaptador para Containers/Workflows, pronto para substituir apenas o executor quando o volume justificar plano pago.
 - `test/`: testes automatizados de criptografia, senha e TOTP.
 
 ## Fluxos implementados
