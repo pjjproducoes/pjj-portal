@@ -116,6 +116,11 @@ export async function trashDriveFile(env:Env,fileId:string):Promise<void>{
   if(!response.ok)throw new Error(`drive_trash_${response.status}`);
 }
 
+export async function restoreDriveFile(env:Env,fileId:string):Promise<void>{
+  const token=await accessToken(env);const response=await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=id,trashed`,{method:'PATCH',headers:{authorization:`Bearer ${token}`,'content-type':'application/json'},body:JSON.stringify({trashed:false})});
+  if(!response.ok)throw new Error(`drive_restore_${response.status}`);
+}
+
 function driveQueryValue(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }

@@ -2,6 +2,7 @@ import type { Env } from './env';
 import type { Principal } from './auth';
 import { streamFile } from './drive';
 import { error, json } from './http';
+import { audit } from './audit';
 
 function canManage(actor: Principal): boolean { return actor.role === 'owner' || actor.role === 'admin'; }
 
@@ -67,5 +68,6 @@ export async function assetContent(request: Request, env: Env, actor: Principal,
   for (const name of ['content-length','content-range','etag','last-modified']) {
     const value = upstream.headers.get(name); if (value) headers.set(name, value);
   }
+  await audit(env,{requestId:rid,actorType:actor.role==='client'?'client':'admin',actorId:actor.userId,action:variant||inlineRequested?'asset.viewed':'asset.downloaded',targetType:'asset',targetId:assetId,metadata:{variant:variant||null}});
   return new Response(upstream.body, { status: upstream.status, headers });
 }
