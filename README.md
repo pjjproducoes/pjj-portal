@@ -49,3 +49,8 @@ npm run check
 ```
 
 O deploy ativo de desenvolvimento é o Worker `pjj-portal-staging`, ligado ao D1 `pjj-portal-staging`. O arquivo `wrangler.processing.example.jsonc` documenta os bindings de processamento que só podem ser ativados quando Containers estiver disponível na conta.
+
+
+## Acompanhamento do produto
+
+O mapa das adaptações do briefing, funcionalidades validadas e lacunas restantes está em [`docs/PROJECT-STATUS.md`](./docs/PROJECT-STATUS.md).
