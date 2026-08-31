@@ -16,6 +16,7 @@ import { viewerPage } from './viewers';
 import { authenticateGrant, createGrant, sharePage, sharedAsset, sharedProject } from './share';
 import { internalRoute } from './internal';
 import { adminOverview, listAccess, listAudit, restoreEntity, revokeAccess, updateEntity } from './admin-ops';
+import { comparisonPage } from './compare';
 
 function route(path: string, pattern: RegExp): RegExpMatchArray | null {
   return path.match(pattern);
@@ -155,6 +156,8 @@ export default {
       if (portalAssetMatch?.[1] && ['GET','HEAD'].includes(request.method)) return assetContent(request, env, actor, portalAssetMatch[1], rid);
       const viewer = route(url.pathname, /^\/viewer\/([0-9a-f-]{36})$/);
       if (viewer?.[1] && request.method === 'GET') return viewerPage(env, actor, viewer[1], rid);
+      const comparison = route(url.pathname, /^\/compare\/([0-9a-f-]{36})$/);
+      if (comparison?.[1] && request.method === 'GET') return comparisonPage(env, actor, comparison[1], rid);
 
       if (!['owner','admin'].includes(actor.role)) return error(403, 'forbidden', 'Você não possui permissão administrativa.', rid);
       if (!actor.mfaEnabled) return error(403, 'mfa_required', 'Ative o segundo fator para acessar a administração.', rid);

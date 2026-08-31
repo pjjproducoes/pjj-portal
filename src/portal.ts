@@ -35,7 +35,10 @@ export async function portalProject(env: Env, actor: Principal, projectId: strin
      FROM assets a WHERE a.project_id=?1 AND a.status!='trashed' AND (?2 IN ('owner','admin') OR a.status='published')
      ORDER BY a.created_at DESC`
   ).bind(projectId, actor.role).all();
-  return json({ project, captures: captures.results, assets: assets.results });
+  const comparison = await env.DB.prepare(`SELECT COUNT(DISTINCT a.id) total FROM assets a JOIN captures c ON c.id=a.capture_id
+    JOIN asset_variants v ON v.asset_id=a.id AND v.variant_type='cog' AND v.status='ready'
+    WHERE a.project_id=?1 AND a.type='orthophoto' AND a.status='published' AND c.status='published'`).bind(projectId).first<{ total:number }>();
+  return json({ project, captures: captures.results, assets: assets.results, comparisonAvailable: (comparison?.total ?? 0) >= 2 });
 }
 
 export async function assetContent(request: Request, env: Env, actor: Principal, assetId: string, rid: string): Promise<Response> {
