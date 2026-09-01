@@ -2,7 +2,7 @@ import type { Env } from './env';
 import type { Principal } from './auth';
 import { audit } from './audit';
 import { error, json } from './http';
-import { trashDriveFile } from './drive';
+import { deleteDriveFile, trashDriveFile } from './drive';
 
 export async function listAssets(env:Env,url:URL):Promise<Response>{
   const projectId=url.searchParams.get('projectId'),captureId=url.searchParams.get('captureId');
@@ -17,9 +17,14 @@ export async function listAssets(env:Env,url:URL):Promise<Response>{
 export async function publishEntity(env:Env,actor:Principal,kind:'project'|'capture'|'asset',id:string,rid:string):Promise<Response>{
   const table=kind==='project'?'projects':kind==='capture'?'captures':'assets';
   if(kind==='asset'){
-    const row=await env.DB.prepare("SELECT status,project_id,capture_id FROM assets WHERE id=?1").bind(id).first<{status:string;project_id:string;capture_id:string|null}>();
+    const row=await env.DB.prepare("SELECT status,project_id,capture_id,type FROM assets WHERE id=?1").bind(id).first<{status:string;project_id:string;capture_id:string|null;type:string}>();
     if(!row)return error(404,'asset_not_found','Produto não encontrado.',rid);
     if(!['review','published'].includes(row.status))return error(409,'asset_not_ready','O produto precisa passar pela validação antes de ser publicado.',rid);
+    const required:{[key:string]:string}={orthophoto:'cog',dsm:'cog',dtm:'cog',model_3d:'optimized_glb',point_cloud:'copc'};
+    if(required[row.type]){
+      const variant=await env.DB.prepare("SELECT 1 ready FROM asset_variants WHERE asset_id=?1 AND variant_type=?2 AND status='ready'").bind(id,required[row.type]).first();
+      if(!variant)return error(409,'required_variant_missing','Cadastre e valide o resultado web necessário antes de publicar.',rid);
+    }
     const statements=[env.DB.prepare("UPDATE assets SET status='published',published_at=COALESCE(published_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP WHERE id=?1").bind(id),
       env.DB.prepare("UPDATE projects SET status='published',published_at=COALESCE(published_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP WHERE id=?1 AND status!='trashed'").bind(row.project_id)];
     if(row.capture_id)statements.push(env.DB.prepare("UPDATE captures SET status='published',published_at=COALESCE(published_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP WHERE id=?1 AND status!='trashed'").bind(row.capture_id));
@@ -27,6 +32,10 @@ export async function publishEntity(env:Env,actor:Principal,kind:'project'|'capt
     await audit(env,{requestId:rid,actorType:'admin',actorId:actor.userId,action:'asset.published',targetType:'asset',targetId:id,metadata:{projectId:row.project_id,captureId:row.capture_id,parentsPublished:true}});
     return json({id,status:'published',projectId:row.project_id,captureId:row.capture_id});
   }
+  const available=kind==='project'
+    ?await env.DB.prepare("SELECT 1 ready FROM assets WHERE project_id=?1 AND status='published' LIMIT 1").bind(id).first()
+    :await env.DB.prepare("SELECT 1 ready FROM assets WHERE capture_id=?1 AND status='published' LIMIT 1").bind(id).first();
+  if(!available)return error(409,'published_delivery_required','Publique ao menos um produto validado antes desta etapa.',rid);
   const result=await env.DB.prepare(`UPDATE ${table} SET status='published',published_at=COALESCE(published_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP WHERE id=?1 AND status!='trashed'`).bind(id).run();
   if(!result.meta.changes)return error(404,`${kind}_not_found`,'Registro não encontrado.',rid);
   await audit(env,{requestId:rid,actorType:'admin',actorId:actor.userId,action:`${kind}.published`,targetType:kind,targetId:id});return json({id,status:'published'});
@@ -86,4 +95,45 @@ export async function trashEntity(env:Env,actor:Principal,kind:'client'|'project
   if(row.drive_id)try{await trashDriveFile(env,row.drive_id)}catch{return error(502,'drive_trash_failed','O Drive não moveu o item para a lixeira.',rid)}
   await env.DB.prepare(`UPDATE ${table} SET status='trashed',trashed_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=?1`).bind(id).run();
   await audit(env,{requestId:rid,actorType:'admin',actorId:actor.userId,action:`${kind}.trashed`,targetType:kind,targetId:id});return json({id,status:'trashed',recoverable:true});
+}
+
+/** Permanently deletes only an item that has already completed the recoverable
+ * trash step. Parent records stay protected until their children are gone. */
+export async function purgeEntity(env:Env,actor:Principal,kind:'client'|'project'|'capture'|'asset',id:string,rid:string):Promise<Response>{
+  const table=kind==='client'?'clients':kind==='project'?'projects':kind==='capture'?'captures':'assets';
+  const driveColumn=kind==='asset'?'original_drive_file_id':'drive_folder_id';
+  const row=await env.DB.prepare(`SELECT ${driveColumn} drive_id FROM ${table} WHERE id=?1 AND status='trashed'`).bind(id).first<{drive_id:string|null}>();
+  if(!row)return error(404,'trashed_not_found','O item precisa estar na lixeira antes da exclusão definitiva.',rid);
+  if(kind==='client'){
+    const child=await env.DB.prepare('SELECT 1 FROM projects WHERE client_id=?1 LIMIT 1').bind(id).first();
+    if(child)return error(409,'client_has_projects','Exclua definitivamente os projetos deste cliente primeiro.',rid);
+  }
+  if(kind==='project'){
+    const child=await env.DB.prepare('SELECT 1 FROM captures WHERE project_id=?1 LIMIT 1').bind(id).first()
+      ||await env.DB.prepare('SELECT 1 FROM assets WHERE project_id=?1 LIMIT 1').bind(id).first();
+    if(child)return error(409,'project_has_deliveries','Exclua definitivamente as captações e os arquivos deste projeto primeiro.',rid);
+  }
+  if(kind==='capture'){
+    const child=await env.DB.prepare('SELECT 1 FROM assets WHERE capture_id=?1 LIMIT 1').bind(id).first();
+    if(child)return error(409,'capture_has_assets','Exclua definitivamente os arquivos desta captação primeiro.',rid);
+  }
+  if(row.drive_id)try{await deleteDriveFile(env,row.drive_id)}catch{return error(502,'drive_delete_failed','O Drive não confirmou a exclusão definitiva.',rid)}
+  if(kind==='asset'){
+    // Variants are separate private Drive files; delete them before removing
+    // their structured references so a retry never leaves a public orphan.
+    const variants=await env.DB.prepare('SELECT id,drive_file_id FROM asset_variants WHERE asset_id=?1').bind(id).all<{id:string;drive_file_id:string}>();
+    for(const variant of variants.results)try{await deleteDriveFile(env,variant.drive_file_id)}catch{return error(502,'drive_delete_failed','O Drive não confirmou a exclusão de todos os derivados.',rid)}
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM upload_sessions WHERE asset_id=?1').bind(id),
+      env.DB.prepare('DELETE FROM processing_jobs WHERE asset_id=?1').bind(id),
+      env.DB.prepare('DELETE FROM asset_variants WHERE asset_id=?1').bind(id),
+      env.DB.prepare('UPDATE assets SET replaces_asset_id=NULL WHERE replaces_asset_id=?1').bind(id),
+      env.DB.prepare("DELETE FROM assets WHERE id=?1 AND status='trashed'").bind(id)
+    ]);
+  }else{
+    const result=await env.DB.prepare(`DELETE FROM ${table} WHERE id=?1 AND status='trashed'`).bind(id).run();
+    if(!result.meta.changes)return error(409,'purge_conflict','O item mudou antes da exclusão definitiva.',rid);
+  }
+  await audit(env,{requestId:rid,actorType:'admin',actorId:actor.userId,action:`${kind}.purged`,targetType:kind,targetId:id});
+  return json({id,deleted:true,recoverable:false});
 }

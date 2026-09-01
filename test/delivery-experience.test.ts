@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { adminV3 } from '../src/admin-v3';
-import { detectedLogoMime } from '../src/admin-ops';
+import { detectedLogoMime, updateEntity } from '../src/admin-ops';
 import { comparisonPage } from '../src/compare';
 import { deliveryViewer } from '../src/delivery-viewer';
 import { operationsUi } from '../src/ops-ui';
@@ -18,11 +18,17 @@ describe('delivery product experience', () => {
 
   it('renders an integrated COG viewer with private same-origin content', async () => {
     const response = deliveryViewer({
-      title:'Ortofoto & campanha', type:'orthophoto', contentUrl:'/api/portal/assets/asset/content?variant=cog'
+      title:'Ortofoto & campanha', type:'orthophoto', contentUrl:'/api/portal/assets/asset/content?variant=cog',
+      navigation:[
+        {url:'/viewer/asset-a',label:'2026-08-01 · ortofoto',current:true},
+        {url:'/viewer/asset-b',label:'2026-09-01 · DSM'}
+      ]
     });
     const body = await response.text();
     expect(body).toContain("fromUrl");
     expect(body).toContain('Resetar enquadramento');
+    expect(body).toContain('Campanha / produto');
+    expect(body).toContain('/viewer/asset-b');
     expect(body).toContain('Ortofoto &amp; campanha');
     expect(body).not.toContain('<title>Ortofoto & campanha</title>');
     expect(response.headers.get('content-security-policy')).toContain("connect-src 'self'");
@@ -36,11 +42,27 @@ describe('delivery product experience', () => {
     expect(body).not.toContain("Copc.create");
   });
 
+  it('offers color, relief and grayscale views only for published elevation rasters',async()=>{
+    const body=await deliveryViewer({title:'DSM',type:'dsm',contentUrl:'/private/dsm?variant=cog'}).text();
+    expect(body).toContain("['Cores','Relevo','Cinza']");
+    expect(body).toContain('getGDALNoData');
+    expect(body).toContain('faixa ');
+  });
+
   it('detects client logos from bytes instead of trusting upload MIME', () => {
     expect(detectedLogoMime(new Uint8Array([137,80,78,71,13,10,26,10]))).toBe('image/png');
     expect(detectedLogoMime(new Uint8Array([0xff,0xd8,0xff,0xe0]))).toBe('image/jpeg');
     expect(detectedLogoMime(new TextEncoder().encode('RIFF0000WEBP'))).toBe('image/webp');
     expect(detectedLogoMime(new TextEncoder().encode('<svg onload=alert(1)>'))).toBeNull();
+  });
+
+  it('does not let generic edits bypass publication and metadata validation',async()=>{
+    const published=await updateEntity(new Request('https://portal.test',{method:'PATCH',body:JSON.stringify({status:'published'})}),{DB:{}} as never,{role:'owner',userId:'owner-1'} as never,'asset','asset-1','request-1');
+    expect(published.status).toBe(400);
+    await expect(published.json()).resolves.toMatchObject({error:{code:'invalid_status'}});
+    const metadata=await updateEntity(new Request('https://portal.test',{method:'PATCH',body:JSON.stringify({metadata_json:'[]'})}),{DB:{}} as never,{role:'owner',userId:'owner-1'} as never,'asset','asset-1','request-1');
+    expect(metadata.status).toBe(400);
+    await expect(metadata.json()).resolves.toMatchObject({error:{code:'invalid_metadata'}});
   });
 });
 
@@ -53,7 +75,10 @@ describe('active administration surface', () => {
     expect(body).toContain('Códigos de recuperação');
     expect(body).toContain('Restaurar versão');
     expect(body).toContain('Lixeira');
+    expect(body).toContain('Excluir definitivamente');
     expect(body).toContain('Capa do projeto');
+    expect(body).toContain('Cadastrar resultado web');
+    expect(body).toContain('variantDialog');
     expect(body).not.toContain('Ex.: 3,15 cm/pixel');
   });
 

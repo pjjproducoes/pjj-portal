@@ -147,6 +147,47 @@ export async function restoreDriveFile(env:Env,fileId:string):Promise<void>{
   if(!response.ok)throw new Error(`drive_restore_${response.status}`);
 }
 
+/** Permanently removes an application-managed item after the portal has
+ * already moved it through its recoverable trash state. */
+export async function deleteDriveFile(env:Env,fileId:string):Promise<void>{
+  const token=await accessToken(env);
+  const response=await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`,{
+    method:'DELETE',headers:{authorization:`Bearer ${token}`}
+  });
+  // A Drive item that no longer exists has the same final state we need. This
+  // makes an interrupted purge safely retryable without exposing the file.
+  if(!response.ok&&response.status!==404)throw new Error(`drive_delete_${response.status}`);
+}
+
+export interface PrivateDriveFileInfo{
+  id:string;name:string;mimeType:string;size:number|null;md5Checksum:string|null;publiclyShared:boolean;
+}
+
+/** Reads metadata and permission scope without ever changing the source file. */
+export async function privateDriveFileInfo(env:Env,fileId:string):Promise<PrivateDriveFileInfo>{
+  const token=await accessToken(env);
+  const fields='id,name,mimeType,size,md5Checksum,trashed,permissions(type,deleted)';
+  const response=await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?supportsAllDrives=true&fields=${encodeURIComponent(fields)}`,{headers:{authorization:`Bearer ${token}`}});
+  if(!response.ok)throw new Error(`drive_file_info_${response.status}`);
+  const info=await response.json<{id?:string;name?:string;mimeType?:string;size?:string;md5Checksum?:string;trashed?:boolean;permissions?:Array<{type?:string;deleted?:boolean}>}>();
+  if(!info.id||info.trashed)throw new Error('drive_file_unavailable');
+  return{id:info.id,name:info.name||'resultado',mimeType:info.mimeType||'application/octet-stream',size:info.size&&Number.isSafeInteger(Number(info.size))?Number(info.size):null,md5Checksum:info.md5Checksum||null,publiclyShared:(info.permissions||[]).some(permission=>permission.type==='anyone'&&!permission.deleted)};
+}
+
+/** Makes a private, application-managed copy in the official PJJ hierarchy. */
+export async function copyDriveFile(env:Env,input:{sourceFileId:string;parentId:string;name:string;assetId:string;variantType:string}):Promise<PrivateDriveFileInfo>{
+  const token=await accessToken(env),fields='id,name,mimeType,size,md5Checksum';
+  const response=await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(input.sourceFileId)}/copy?supportsAllDrives=true&fields=${encodeURIComponent(fields)}`,{
+    method:'POST',headers:{authorization:`Bearer ${token}`,'content-type':'application/json; charset=UTF-8'},body:JSON.stringify({
+      name:input.name.slice(0,200),parents:[input.parentId],appProperties:{pjjManaged:'true',assetId:input.assetId,variantType:input.variantType}
+    })
+  });
+  if(!response.ok)throw new Error(`drive_file_copy_${response.status}`);
+  const info=await response.json<{id?:string;name?:string;mimeType?:string;size?:string;md5Checksum?:string}>();
+  if(!info.id)throw new Error('drive_file_copy_invalid');
+  return{id:info.id,name:info.name||input.name,mimeType:info.mimeType||'application/octet-stream',size:info.size&&Number.isSafeInteger(Number(info.size))?Number(info.size):null,md5Checksum:info.md5Checksum||null,publiclyShared:false};
+}
+
 function driveQueryValue(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }

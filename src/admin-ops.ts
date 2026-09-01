@@ -88,18 +88,27 @@ export async function restoreEntity(env:Env,actor:Principal,kind:keyof typeof ta
 export async function updateEntity(request:Request,env:Env,actor:Principal,kind:'client'|'project'|'capture'|'asset',id:string,rid:string):Promise<Response>{
   let input:Record<string,unknown>;try{input=await readJson(request)}catch{return error(400,'invalid_json','Dados inválidos.',rid)}
   if(kind==='capture'&&input.metrics&&typeof input.metrics==='object'&&!Array.isArray(input.metrics)){input.metrics_json=input.metrics;delete input.metrics}
+  if(kind==='project'&&input.cover_asset_id==='')input.cover_asset_id=null;
   const allowed=kind==='client'?['name','legal_name','primary_contact_name','email','phone','notes','status','branding_json']:
     kind==='project'?['name','description','location_text','latitude','longitude','cover_asset_id','status','visibility','settings_json']:
     kind==='capture'?['title','description','captured_at','status','metrics_json']:
     ['title','type','downloadable','status','metadata_json'];
   const entries=Object.entries(input).filter(([k])=>allowed.includes(k));if(!entries.length)return error(400,'empty_update','Nenhuma alteração válida.',rid);
+  const statusValues:Record<typeof kind,string[]>={client:['active','archived'],project:['draft','processing','review','archived'],capture:['draft','uploading','processing','review','archived'],asset:['uploading','received','validating','processing','review','failed','archived']};
+  if(input.status!==undefined&&!statusValues[kind].includes(String(input.status)))return error(400,'invalid_status','Use o fluxo específico de publicação, retirada ou lixeira.',rid);
+  if(kind==='asset'&&input.type!==undefined&&!['orthophoto','dsm','dtm','model_3d','point_cloud','photo','video','pdf','document','source','other'].includes(String(input.type)))return error(400,'invalid_asset_type','Tipo de produto inválido.',rid);
+  if(kind==='asset'&&input.downloadable!==undefined&&typeof input.downloadable!=='boolean')return error(400,'invalid_download_permission','A permissão de download é inválida.',rid);
+  if(kind==='client'&&input.email!==undefined&&input.email!==null&&(typeof input.email!=='string'||input.email.length>254||!/^\S+@\S+\.\S+$/.test(input.email)))return error(400,'invalid_email','E-mail inválido.',rid);
   if(entries.some(([key,value])=>['name','title'].includes(key)&&(!String(value||'').trim()||String(value).length>180)))return error(400,'invalid_name','Informe um nome válido.',rid);
   if(kind==='capture'&&input.captured_at&&Number.isNaN(Date.parse(String(input.captured_at))))return error(400,'invalid_capture_date','Informe uma data de captação válida.',rid);
   if(kind==='project'&&input.visibility&&!['private','shared','public_demo'].includes(String(input.visibility)))return error(400,'invalid_visibility','Visibilidade inválida.',rid);
   if(kind==='project'&&input.cover_asset_id){const cover=await env.DB.prepare("SELECT id FROM assets WHERE id=?1 AND project_id=?2 AND type='photo' AND status='published'").bind(input.cover_asset_id,id).first();if(!cover)return error(400,'invalid_cover','A capa precisa ser uma fotografia publicada deste projeto.',rid)}
   if(kind==='project'&&input.latitude!==undefined&&(typeof input.latitude!=='number'||!Number.isFinite(input.latitude)||input.latitude< -90||input.latitude>90))return error(400,'invalid_coordinates','Latitude inválida.',rid);
   if(kind==='project'&&input.longitude!==undefined&&(typeof input.longitude!=='number'||!Number.isFinite(input.longitude)||input.longitude< -180||input.longitude>180))return error(400,'invalid_coordinates','Longitude inválida.',rid);
-  for(const [k,v] of entries)if((k.endsWith('_json'))&&typeof v!=='string')input[k]=JSON.stringify(v);
+  for(const [k,v] of entries)if(k.endsWith('_json')){
+    if(typeof v==='string'){try{const parsed=JSON.parse(v);if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))return error(400,'invalid_metadata','Metadados precisam formar um objeto válido.',rid)}catch{return error(400,'invalid_metadata','Metadados precisam formar um objeto válido.',rid)}}
+    else if(v&&typeof v==='object'&&!Array.isArray(v))input[k]=JSON.stringify(v);else return error(400,'invalid_metadata','Metadados precisam formar um objeto válido.',rid);
+  }
   const table=kind==='client'?'clients':kind==='project'?'projects':kind==='capture'?'captures':'assets';
   const sets=entries.map(([k],i)=>`${k}=?${i+2}`).join(',');const stmt=env.DB.prepare(`UPDATE ${table} SET ${sets},updated_at=CURRENT_TIMESTAMP WHERE id=?1 AND status!='trashed'`).bind(id,...entries.map(([k])=>input[k]??null));const result=await stmt.run();
   if(!result.meta.changes)return error(404,`${kind}_not_found`,'Registro não encontrado.',rid);await audit(env,{requestId:rid,actorType:'admin',actorId:actor.userId,action:`${kind}.updated`,targetType:kind,targetId:id});return json({id,updated:true});

@@ -11,7 +11,7 @@ import { adminUi, institutional, invitationUi, portalUi, privacyUi } from './ui'
 import { assetContent, portalProject, portalProjects } from './portal';
 import { acceptInvitation, createPortalUser, listPortalUsers, updatePortalUser } from './users';
 import { createEmbed, embedAsset, embedLogo, embedPage, embedViewer } from './embeds';
-import { listAssets, publishEntity, retryJob, rollbackAsset, trashEntity, unpublishAsset } from './lifecycle';
+import { listAssets, publishEntity, purgeEntity, retryJob, rollbackAsset, trashEntity, unpublishAsset } from './lifecycle';
 import { viewerPage } from './viewers';
 import { authenticateGrant, createGrant, sharePage, sharedAsset, sharedProject, sharedViewer } from './share';
 import { internalRoute } from './internal';
@@ -20,6 +20,7 @@ import { reviewPage } from './review';
 import { comparisonPage } from './compare';
 import { operationsUi } from './ops-ui';
 import { demoAsset, demoIndex, demoProject, demoViewer } from './demo';
+import { registerManualVariant } from './manual-variants';
 
 function route(path: string, pattern: RegExp): RegExpMatchArray | null {
   return path.match(pattern);
@@ -201,6 +202,8 @@ export default {
       if(revoke?.[1]&&revoke[2]&&request.method==='POST')return revokeAccess(env,actor,revoke[1].slice(0,-1) as 'grant'|'embed'|'session',revoke[2],rid);
       const restore = route(url.pathname, /^\/api\/admin\/(clients|projects|captures|assets)\/([0-9a-f-]{36})\/restore$/);
       if(restore?.[1]&&restore[2]&&request.method==='POST')return restoreEntity(env,actor,restore[1].slice(0,-1) as 'client'|'project'|'capture'|'asset',restore[2],rid);
+      const purge = route(url.pathname, /^\/api\/admin\/(clients|projects|captures|assets)\/([0-9a-f-]{36})\/purge$/);
+      if(purge?.[1]&&purge[2]&&request.method==='DELETE')return purgeEntity(env,actor,purge[1].slice(0,-1) as 'client'|'project'|'capture'|'asset',purge[2],rid);
       const update = route(url.pathname, /^\/api\/admin\/(clients|projects|captures|assets)\/([0-9a-f-]{36})$/);
       if(update?.[1]&&update[2]&&request.method==='PATCH')return updateEntity(request,env,actor,update[1].slice(0,-1) as 'client'|'project'|'capture'|'asset',update[2],rid);
       const publish = route(url.pathname, /^\/api\/admin\/(projects|captures|assets)\/([0-9a-f-]{36})\/publish$/);
@@ -209,6 +212,8 @@ export default {
       if (unpublish?.[1] && request.method === 'POST') return unpublishAsset(env, actor, unpublish[1], rid);
       const rollback = route(url.pathname, /^\/api\/admin\/assets\/([0-9a-f-]{36})\/rollback$/);
       if (rollback?.[1] && request.method === 'POST') return rollbackAsset(env, actor, rollback[1], rid);
+      const manualVariant = route(url.pathname, /^\/api\/admin\/assets\/([0-9a-f-]{36})\/variants$/);
+      if (manualVariant?.[1] && request.method === 'POST') return registerManualVariant(request,env,actor,manualVariant[1],rid);
       const retry = route(url.pathname, /^\/api\/admin\/jobs\/([0-9a-f-]{36})\/retry$/);
       if (retry?.[1] && request.method === 'POST') return retryJob(env, actor, retry[1], rid);
       const trash = route(url.pathname, /^\/api\/admin\/(clients|projects|captures|assets)\/([0-9a-f-]{36})$/);
