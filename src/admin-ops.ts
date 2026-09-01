@@ -37,11 +37,15 @@ export async function restoreEntity(env:Env,actor:Principal,kind:keyof typeof ta
   const status=kind==='client'?'active':'draft';await env.DB.prepare(`UPDATE ${table} SET status=?2,trashed_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?1`).bind(id,status).run();
   await audit(env,{requestId:rid,actorType:'admin',actorId:actor.userId,action:`${kind}.restored`,targetType:kind,targetId:id});return json({id,status});
 }
-export async function updateEntity(request:Request,env:Env,actor:Principal,kind:'client'|'project',id:string,rid:string):Promise<Response>{
+export async function updateEntity(request:Request,env:Env,actor:Principal,kind:'client'|'project'|'capture'|'asset',id:string,rid:string):Promise<Response>{
   let input:Record<string,unknown>;try{input=await readJson(request)}catch{return error(400,'invalid_json','Dados inválidos.',rid)}
-  const allowed=kind==='client'?['name','legal_name','primary_contact_name','email','phone','notes','status','branding_json']:['name','description','location_text','status','visibility','settings_json'];
+  const allowed=kind==='client'?['name','legal_name','primary_contact_name','email','phone','notes','status','branding_json']:
+    kind==='project'?['name','description','location_text','status','visibility','settings_json']:
+    kind==='capture'?['title','description','captured_at','status','metrics_json']:
+    ['title','type','downloadable','status','metadata_json'];
   const entries=Object.entries(input).filter(([k])=>allowed.includes(k));if(!entries.length)return error(400,'empty_update','Nenhuma alteração válida.',rid);
   for(const [k,v] of entries)if((k.endsWith('_json'))&&typeof v!=='string')input[k]=JSON.stringify(v);
-  const sets=entries.map(([k],i)=>`${k}=?${i+2}`).join(',');const stmt=env.DB.prepare(`UPDATE ${kind==='client'?'clients':'projects'} SET ${sets},updated_at=CURRENT_TIMESTAMP WHERE id=?1 AND status!='trashed'`).bind(id,...entries.map(([k])=>input[k]??null));const result=await stmt.run();
+  const table=kind==='client'?'clients':kind==='project'?'projects':kind==='capture'?'captures':'assets';
+  const sets=entries.map(([k],i)=>`${k}=?${i+2}`).join(',');const stmt=env.DB.prepare(`UPDATE ${table} SET ${sets},updated_at=CURRENT_TIMESTAMP WHERE id=?1 AND status!='trashed'`).bind(id,...entries.map(([k])=>input[k]??null));const result=await stmt.run();
   if(!result.meta.changes)return error(404,`${kind}_not_found`,'Registro não encontrado.',rid);await audit(env,{requestId:rid,actorType:'admin',actorId:actor.userId,action:`${kind}.updated`,targetType:kind,targetId:id});return json({id,updated:true});
 }
