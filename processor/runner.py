@@ -33,7 +33,7 @@ def execute(path):
     payload={'accessToken':token(),'inputFileId':job['original_drive_file_id'],'outputFolderId':job['output_folder_id'],
              'assetId':job['asset_id'],'type':job['type'],'originalName':job['original_name']}
     try:
-        api(f'/api/internal/jobs/{job_id}/heartbeat',{'progress':15});output=process(payload,token);api(f'/api/internal/jobs/{job_id}/complete',output)
+        api(f'/api/internal/jobs/{job_id}/heartbeat',{'progress':15});output=process(payload,token,lambda progress:api(f'/api/internal/jobs/{job_id}/heartbeat',{'progress':progress}));api(f'/api/internal/jobs/{job_id}/complete',output)
     except Exception as error:
         api(f'/api/internal/jobs/{job_id}/fail',{'error':type(error).__name__,'detail':str(error)[:2000]});raise
     print(json.dumps({'ok':True,'jobId':job_id}))
