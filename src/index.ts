@@ -11,7 +11,7 @@ import { adminUi, institutional, invitationUi, portalUi, privacyUi } from './ui'
 import { assetContent, portalProject, portalProjects } from './portal';
 import { acceptInvitation, createPortalUser, listPortalUsers } from './users';
 import { createEmbed, embedAsset, embedPage } from './embeds';
-import { listAssets, publishEntity, retryJob, trashEntity } from './lifecycle';
+import { listAssets, publishEntity, retryJob, trashEntity, unpublishAsset } from './lifecycle';
 import { viewerPage } from './viewers';
 import { authenticateGrant, createGrant, sharePage, sharedAsset, sharedProject } from './share';
 import { internalRoute } from './internal';
@@ -186,6 +186,8 @@ export default {
       if(update?.[1]&&update[2]&&request.method==='PATCH')return updateEntity(request,env,actor,update[1].slice(0,-1) as 'client'|'project'|'capture'|'asset',update[2],rid);
       const publish = route(url.pathname, /^\/api\/admin\/(projects|captures|assets)\/([0-9a-f-]{36})\/publish$/);
       if (publish?.[1] && publish[2] && request.method === 'POST') return publishEntity(env, actor, publish[1].slice(0,-1) as 'project'|'capture'|'asset', publish[2], rid);
+      const unpublish = route(url.pathname, /^\/api\/admin\/assets\/([0-9a-f-]{36})\/unpublish$/);
+      if (unpublish?.[1] && request.method === 'POST') return unpublishAsset(env, actor, unpublish[1], rid);
       const retry = route(url.pathname, /^\/api\/admin\/jobs\/([0-9a-f-]{36})\/retry$/);
       if (retry?.[1] && request.method === 'POST') return retryJob(env, actor, retry[1], rid);
       const trash = route(url.pathname, /^\/api\/admin\/(clients|projects|captures|assets)\/([0-9a-f-]{36})$/);
