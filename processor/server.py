@@ -48,12 +48,14 @@ def detected_kind(path,declared):
     if mime=='application/pdf':return 'pdf',mime
     return declared,mime
 
-def process(job,token_provider=None):
+def process(job,token_provider=None,on_progress=None):
+    def progress(value):
+      if on_progress:on_progress(value)
     required=['accessToken','inputFileId','outputFolderId','assetId','type','originalName']
     if any(not job.get(k) for k in required):raise ValueError('missing_job_field')
     with tempfile.TemporaryDirectory(prefix='pjj-') as tmp:
-      original=pathlib.Path(tmp)/pathlib.Path(job['originalName']).name;download(job['inputFileId'],job['accessToken'],original)
-      kind,detected_mime=detected_kind(original,job['type']); outputs=[]; metadata={'inputSha256':sha256(original),'inputBytes':original.stat().st_size,'declaredType':job['type'],'detectedType':kind,'detectedMimeType':detected_mime}
+      original=pathlib.Path(tmp)/pathlib.Path(job['originalName']).name;download(job['inputFileId'],job['accessToken'],original);progress(30)
+      kind,detected_mime=detected_kind(original,job['type']); outputs=[]; metadata={'inputSha256':sha256(original),'inputBytes':original.stat().st_size,'declaredType':job['type'],'detectedType':kind,'detectedMimeType':detected_mime};progress(45)
       if kind in ('orthophoto','dsm','dtm'):
         info=json.loads(run('gdalinfo','-json',str(original)));metadata['gdal']=info
         if not info.get('coordinateSystem') or not (info.get('geoTransform') or info.get('gcps')):
@@ -87,11 +89,12 @@ def process(job,token_provider=None):
       elif kind in ('document','source','other'):
         metadata['validated']=True
       else:raise ValueError('unsupported_asset_type')
-      variants=[]
-      for variant,path,mime in outputs:
+      progress(70);variants=[]
+      for index,(variant,path,mime) in enumerate(outputs,1):
         upload_token=token_provider() if token_provider else job['accessToken']
         result=upload(path,upload_token,job['outputFolderId'],path.name,mime,{'pjjManaged':'true','assetId':job['assetId'],'variantType':variant})
         variants.append({'type':variant,'driveFileId':result['id'],'format':path.suffix.lstrip('.'),'mimeType':mime,'sizeBytes':path.stat().st_size,'sha256':sha256(path)})
+        progress(70+int(25*index/max(1,len(outputs))))
       return {'metadata':metadata,'variants':variants}
 
 class Handler(BaseHTTPRequestHandler):
