@@ -24,6 +24,15 @@ export async function listAudit(env:Env,url:URL):Promise<Response>{
   const q=url.searchParams.get('q')?.trim()||null,limit=Math.min(200,Math.max(1,Number(url.searchParams.get('limit')||100)));
   const rows=await env.DB.prepare(`SELECT id,request_id,actor_type,actor_id,action,target_type,target_id,outcome,metadata_json,created_at FROM audit_logs WHERE ?1 IS NULL OR action LIKE '%'||?1||'%' OR target_type LIKE '%'||?1||'%' OR target_id=?1 ORDER BY id DESC LIMIT ?2`).bind(q,limit).all();return json({items:rows.results});
 }
+export async function listTrash(env:Env):Promise<Response>{
+  const [clients,projects,captures,assets]=await Promise.all([
+    env.DB.prepare("SELECT id,name label,status,trashed_at FROM clients WHERE status='trashed' ORDER BY trashed_at DESC").all(),
+    env.DB.prepare("SELECT id,name label,status,trashed_at FROM projects WHERE status='trashed' ORDER BY trashed_at DESC").all(),
+    env.DB.prepare("SELECT id,COALESCE(title,captured_at) label,status,trashed_at FROM captures WHERE status='trashed' ORDER BY trashed_at DESC").all(),
+    env.DB.prepare("SELECT id,title label,status,trashed_at FROM assets WHERE status='trashed' ORDER BY trashed_at DESC").all()
+  ]);
+  return json({clients:clients.results,projects:projects.results,captures:captures.results,assets:assets.results});
+}
 export async function revokeAccess(env:Env,actor:Principal,kind:'grant'|'embed'|'session',id:string,rid:string):Promise<Response>{
   const table=kind==='grant'?'access_grants':kind==='embed'?'embeds':'sessions';
   const result=await env.DB.prepare(`UPDATE ${table} SET revoked_at=CURRENT_TIMESTAMP${kind==='embed'?',status=\'disabled\'':''} WHERE id=?1 AND revoked_at IS NULL`).bind(id).run();
