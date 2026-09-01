@@ -181,8 +181,8 @@ export default {
       if(revoke?.[1]&&revoke[2]&&request.method==='POST')return revokeAccess(env,actor,revoke[1].slice(0,-1) as 'grant'|'embed'|'session',revoke[2],rid);
       const restore = route(url.pathname, /^\/api\/admin\/(clients|projects|captures|assets)\/([0-9a-f-]{36})\/restore$/);
       if(restore?.[1]&&restore[2]&&request.method==='POST')return restoreEntity(env,actor,restore[1].slice(0,-1) as 'client'|'project'|'capture'|'asset',restore[2],rid);
-      const update = route(url.pathname, /^\/api\/admin\/(clients|projects)\/([0-9a-f-]{36})$/);
-      if(update?.[1]&&update[2]&&request.method==='PATCH')return updateEntity(request,env,actor,update[1].slice(0,-1) as 'client'|'project',update[2],rid);
+      const update = route(url.pathname, /^\/api\/admin\/(clients|projects|captures|assets)\/([0-9a-f-]{36})$/);
+      if(update?.[1]&&update[2]&&request.method==='PATCH')return updateEntity(request,env,actor,update[1].slice(0,-1) as 'client'|'project'|'capture'|'asset',update[2],rid);
       const publish = route(url.pathname, /^\/api\/admin\/(projects|captures|assets)\/([0-9a-f-]{36})\/publish$/);
       if (publish?.[1] && publish[2] && request.method === 'POST') return publishEntity(env, actor, publish[1].slice(0,-1) as 'project'|'capture'|'asset', publish[2], rid);
       const retry = route(url.pathname, /^\/api\/admin\/jobs\/([0-9a-f-]{36})\/retry$/);
