@@ -54,3 +54,4 @@ O deploy ativo de desenvolvimento é o Worker `pjj-portal-staging`, ligado ao D1
 ## Acompanhamento do produto
 
 O mapa das adaptações do briefing, funcionalidades validadas e lacunas restantes está em [`docs/PROJECT-STATUS.md`](./docs/PROJECT-STATUS.md). A arquitetura operacional, os limites e o fluxo de recuperação estão em [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
+O procedimento de ambientes, publicação, recuperação e diagnóstico está em [`docs/OPERATIONS.md`](./docs/OPERATIONS.md).
