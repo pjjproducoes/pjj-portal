@@ -3,6 +3,7 @@ import { encrypt } from './crypto';
 import { error, json, readJson } from './http';
 import { sha256Hex } from './crypto';
 import { driveAccessToken } from './drive';
+import { audit } from './audit';
 
 async function authorized(request: Request, env: Env): Promise<boolean> {
   const supplied = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || '';
@@ -91,6 +92,7 @@ export async function internalRoute(request: Request, env: Env, rid: string): Pr
       AND NOT EXISTS(SELECT 1 FROM assets a JOIN processing_jobs j ON j.asset_id=a.id WHERE a.capture_id=captures.id AND j.status NOT IN ('succeeded','cancelled'))`).bind(job.asset_id).run();
     await env.DB.prepare(`UPDATE projects SET status='review',updated_at=CURRENT_TIMESTAMP WHERE id=(SELECT project_id FROM assets WHERE id=?1)
       AND NOT EXISTS(SELECT 1 FROM assets a JOIN processing_jobs j ON j.asset_id=a.id WHERE a.project_id=projects.id AND j.status NOT IN ('succeeded','cancelled'))`).bind(job.asset_id).run();
+    await audit(env,{requestId:rid,actorType:'system',action:'processing.completed',targetType:'asset',targetId:job.asset_id,metadata:{jobId,variantCount:variants.length}});
     return json({ ok: true, status: 'review' });
   }
   const detail = String(input.detail || input.error || 'processing_failed').slice(0, 2000);
@@ -99,11 +101,13 @@ export async function internalRoute(request: Request, env: Env, rid: string): Pr
       env.DB.prepare("UPDATE processing_jobs SET status='retrying',progress=0,error_code=?2,error_message=?3,next_attempt_at=datetime('now','+5 minutes') WHERE id=?1").bind(jobId, input.error || 'processing_failed', detail),
       env.DB.prepare("UPDATE assets SET status='processing',error_code=?2,error_message=?3,updated_at=CURRENT_TIMESTAMP WHERE id=?1").bind(job.asset_id, input.error || 'processing_failed', detail)
     ]);
+    await audit(env,{requestId:rid,actorType:'system',action:'processing.retry_scheduled',targetType:'asset',targetId:job.asset_id,outcome:'failure',metadata:{jobId,error:input.error || 'processing_failed'}});
     return json({ ok: true, status: 'retrying' });
   }
   await env.DB.batch([
     env.DB.prepare("UPDATE processing_jobs SET status='failed',error_code=?2,error_message=?3,finished_at=CURRENT_TIMESTAMP WHERE id=?1").bind(jobId, input.error || 'processing_failed', detail),
     env.DB.prepare("UPDATE assets SET status='failed',error_code=?2,error_message=?3,updated_at=CURRENT_TIMESTAMP WHERE id=?1").bind(job.asset_id, input.error || 'processing_failed', detail)
   ]);
+  await audit(env,{requestId:rid,actorType:'system',action:'processing.failed',targetType:'asset',targetId:job.asset_id,outcome:'failure',metadata:{jobId,error:input.error || 'processing_failed'}});
   return json({ ok: true, status: 'failed' });
 }

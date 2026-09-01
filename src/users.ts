@@ -31,5 +31,6 @@ export async function acceptInvitation(request:Request,env:Env,rid:string):Promi
     .bind(await sha256Hex(input.token||'')).first<{id:string;user_id:string}>();if(!invitation)return error(410,'invite_invalid','O convite expirou ou já foi usado.',rid);
   let passwordHash:string;try{passwordHash=await hashPassword(input.password)}catch{return error(400,'weak_password','Use uma senha com pelo menos 12 caracteres.',rid)}
   await env.DB.batch([env.DB.prepare('UPDATE invitations SET used_at=CURRENT_TIMESTAMP WHERE id=?1').bind(invitation.id),env.DB.prepare("UPDATE users SET password_hash=?2,status='active',updated_at=CURRENT_TIMESTAMP WHERE id=?1").bind(invitation.user_id,passwordHash)]);
+  await audit(env,{requestId:rid,actorType:'client',actorId:invitation.user_id,action:'portal_invitation.accepted',targetType:'user',targetId:invitation.user_id});
   return json({accepted:true});
 }
