@@ -26,7 +26,7 @@ dependem de compartilhamento público.
 | Diretriz do briefing | Implementação atual |
 | --- | --- |
 | Drive como armazenamento definitivo | Implementado. OAuth do proprietário fornece cota de gravação; conta de serviço é usada pelo executor. |
-| Sem dependência do computador | Implementado. Não há agente, heartbeat local, WebODM ou comunicação PC ↔ portal. |
+| Sem dependência do computador | Implementado. Não há agente, heartbeat, WebODM ou comunicação PC ↔ portal. |
 | Processamento Cloudflare/Containers | A fase atual usa GitHub Actions com ferramentas reais (GDAL, PDAL, Assimp, FFmpeg e glTF Transform). Containers permanece como caminho de migração quando o volume justificar o plano/infraestrutura. |
 | Upload manual, restante automático | Implementado com sessão resumível, retomada, retry, fila e revisão antes de publicar. |
 | Segurança de arquivos | Implementada por sessão, autorização por projeto, streaming privado, downloads autorizados, expiração/revogação e auditoria. |

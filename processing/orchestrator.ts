@@ -23,7 +23,7 @@ export class ProcessingWorkflow extends WorkflowEntrypoint<ProcessingEnv,{jobId:
       const row=await this.env.DB.prepare(`SELECT j.id,j.asset_id,a.type,a.original_name,a.original_drive_file_id,a.project_id,c.drive_folder_id capture_folder,p.drive_folder_id project_folder
         FROM processing_jobs j JOIN assets a ON a.id=j.asset_id JOIN projects p ON p.id=a.project_id LEFT JOIN captures c ON c.id=a.capture_id
         WHERE j.id=?1 AND j.status IN ('queued','retrying')`).bind(event.payload.jobId).first<any>();if(!row)throw new Error('job_not_claimable');
-      await this.env.DB.prepare("UPDATE processing_jobs SET status='running',attempt=attempt+1,started_at=CURRENT_TIMESTAMP,heartbeat_at=CURRENT_TIMESTAMP,progress=5 WHERE id=?1").bind(row.id).run();return row;
+      await this.env.DB.prepare("UPDATE processing_jobs SET status='running',attempt=attempt+1,started_at=CURRENT_TIMESTAMP,progress=5 WHERE id=?1").bind(row.id).run();return row;
     });
     try {
     const output=await step.do('convert and validate',{retries:{limit:2,delay:'30 seconds',backoff:'exponential'},timeout:'6 hours'},async()=>{

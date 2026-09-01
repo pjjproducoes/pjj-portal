@@ -38,9 +38,11 @@ export async function internalRoute(request: Request, env: Env, rid: string): Pr
   }
 
   if (path === '/api/internal/jobs/claim' && request.method === 'POST') {
+    // The scheduled executor is stateless. Jobs that exceed the execution
+    // window return to the queue on the next run; no heartbeat is required.
     await env.DB.prepare(`UPDATE processing_jobs SET status='retrying',progress=0,error_code='runner_interrupted',
-      error_message='O executor anterior foi interrompido; processamento retomado automaticamente.',next_attempt_at=CURRENT_TIMESTAMP
-      WHERE status='running' AND heartbeat_at<datetime('now','-6 hours')`).run();
+      error_message='O executor anterior excedeu a janela de execução; processamento retomado automaticamente.',next_attempt_at=CURRENT_TIMESTAMP
+      WHERE status='running' AND started_at<datetime('now','-6 hours')`).run();
     const job = await env.DB.prepare(`SELECT j.id job_id,j.asset_id,a.type,a.original_name,a.original_drive_file_id,
       COALESCE(c.drive_folder_id,p.drive_folder_id) output_folder_id,a.size_bytes
       FROM processing_jobs j JOIN assets a ON a.id=j.asset_id JOIN projects p ON p.id=a.project_id
@@ -49,7 +51,7 @@ export async function internalRoute(request: Request, env: Env, rid: string): Pr
       ORDER BY j.queued_at LIMIT 1`).first<Record<string, unknown>>();
     if (!job) return new Response(null, { status: 204 });
     const claimed = await env.DB.prepare(`UPDATE processing_jobs SET status='running',attempt=attempt+1,progress=5,
-      started_at=COALESCE(started_at,CURRENT_TIMESTAMP),heartbeat_at=CURRENT_TIMESTAMP,error_code=NULL,error_message=NULL
+      started_at=CURRENT_TIMESTAMP,error_code=NULL,error_message=NULL
       WHERE id=?1 AND status IN ('queued','retrying')`).bind(job.job_id).run();
     if (!claimed.meta.changes) return new Response(null, { status: 204 });
     await env.DB.prepare("UPDATE assets SET status='validating',error_code=NULL,error_message=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?1")
@@ -64,16 +66,9 @@ export async function internalRoute(request: Request, env: Env, rid: string): Pr
     return json({format:'pjj-d1-backup-v1',createdAt:new Date().toISOString(),environment:env.ENVIRONMENT,tables:data});
   }
 
-  const match = path.match(/^\/api\/internal\/jobs\/([0-9a-f-]{36})\/(heartbeat|complete|fail)$/);
+  const match = path.match(/^\/api\/internal\/jobs\/([0-9a-f-]{36})\/(complete|fail)$/);
   if (!match || request.method !== 'POST') return error(404, 'not_found', 'Rota interna não encontrada.', rid);
   const [, jobId, action] = match;
-  if (action === 'heartbeat') {
-    let input: { progress?: number } = {};
-    try { input = await readJson(request); } catch {}
-    const progress = Math.max(5, Math.min(95, Math.floor(input.progress || 10)));
-    await env.DB.prepare("UPDATE processing_jobs SET heartbeat_at=CURRENT_TIMESTAMP,progress=?2 WHERE id=?1 AND status='running'").bind(jobId, progress).run();
-    return json({ ok: true });
-  }
   let input: { metadata?: unknown; variants?: Array<{type:string;driveFileId:string;format:string;mimeType?:string;sizeBytes?:number;sha256?:string}>; error?:string; detail?:string };
   try { input = await readJson(request); } catch { return error(400, 'invalid_json', 'Payload inválido.', rid); }
   const job = await env.DB.prepare("SELECT asset_id,attempt,max_attempts FROM processing_jobs WHERE id=?1 AND status='running'").bind(jobId)
@@ -89,7 +84,7 @@ export async function internalRoute(request: Request, env: Env, rid: string): Pr
     const validTypes=new Set(['orthophoto','dsm','dtm','model_3d','point_cloud','photo','video','pdf','document','source','other']);
     statements.push(env.DB.prepare("UPDATE assets SET status='review',type=CASE WHEN ?3 IS NOT NULL THEN ?3 ELSE type END,metadata_json=?2,error_code=NULL,error_message=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?1")
       .bind(job.asset_id, JSON.stringify(input.metadata || {}),detected&&validTypes.has(detected)?detected:null));
-    statements.push(env.DB.prepare("UPDATE processing_jobs SET status='succeeded',progress=100,finished_at=CURRENT_TIMESTAMP,heartbeat_at=CURRENT_TIMESTAMP,output_json=?2 WHERE id=?1")
+    statements.push(env.DB.prepare("UPDATE processing_jobs SET status='succeeded',progress=100,finished_at=CURRENT_TIMESTAMP,output_json=?2 WHERE id=?1")
       .bind(jobId, JSON.stringify({ metadata: input.metadata || {}, variants })));
     await env.DB.batch(statements);
     await env.DB.prepare(`UPDATE captures SET status='review',updated_at=CURRENT_TIMESTAMP WHERE id=(SELECT capture_id FROM assets WHERE id=?1)
@@ -101,13 +96,13 @@ export async function internalRoute(request: Request, env: Env, rid: string): Pr
   const detail = String(input.detail || input.error || 'processing_failed').slice(0, 2000);
   if (job.attempt < job.max_attempts) {
     await env.DB.batch([
-      env.DB.prepare("UPDATE processing_jobs SET status='retrying',progress=0,error_code=?2,error_message=?3,next_attempt_at=datetime('now','+5 minutes'),heartbeat_at=CURRENT_TIMESTAMP WHERE id=?1").bind(jobId, input.error || 'processing_failed', detail),
+      env.DB.prepare("UPDATE processing_jobs SET status='retrying',progress=0,error_code=?2,error_message=?3,next_attempt_at=datetime('now','+5 minutes') WHERE id=?1").bind(jobId, input.error || 'processing_failed', detail),
       env.DB.prepare("UPDATE assets SET status='processing',error_code=?2,error_message=?3,updated_at=CURRENT_TIMESTAMP WHERE id=?1").bind(job.asset_id, input.error || 'processing_failed', detail)
     ]);
     return json({ ok: true, status: 'retrying' });
   }
   await env.DB.batch([
-    env.DB.prepare("UPDATE processing_jobs SET status='failed',error_code=?2,error_message=?3,finished_at=CURRENT_TIMESTAMP,heartbeat_at=CURRENT_TIMESTAMP WHERE id=?1").bind(jobId, input.error || 'processing_failed', detail),
+    env.DB.prepare("UPDATE processing_jobs SET status='failed',error_code=?2,error_message=?3,finished_at=CURRENT_TIMESTAMP WHERE id=?1").bind(jobId, input.error || 'processing_failed', detail),
     env.DB.prepare("UPDATE assets SET status='failed',error_code=?2,error_message=?3,updated_at=CURRENT_TIMESTAMP WHERE id=?1").bind(job.asset_id, input.error || 'processing_failed', detail)
   ]);
   return json({ ok: true, status: 'failed' });
