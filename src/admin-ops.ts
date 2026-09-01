@@ -1,10 +1,47 @@
 import type { Env } from './env';
 import type { Principal } from './auth';
 import { audit } from './audit';
-import { restoreDriveFile } from './drive';
+import { restoreDriveFile, trashDriveFile, uploadSmallDriveFile } from './drive';
 import { error, json, readJson } from './http';
 
 const tables={client:'clients',project:'projects',capture:'captures',asset:'assets'} as const;
+const LOGO_MAX_BYTES=2*1024*1024;
+
+export function detectedLogoMime(bytes:Uint8Array):'image/png'|'image/jpeg'|'image/webp'|null{
+  if(bytes.length>=8&&[137,80,78,71,13,10,26,10].every((value,index)=>bytes[index]===value))return'image/png';
+  if(bytes.length>=3&&bytes[0]===0xff&&bytes[1]===0xd8&&bytes[2]===0xff)return'image/jpeg';
+  if(bytes.length>=12&&new TextDecoder().decode(bytes.slice(0,4))==='RIFF'&&new TextDecoder().decode(bytes.slice(8,12))==='WEBP')return'image/webp';
+  return null;
+}
+
+async function boundedBody(request:Request,maxBytes:number):Promise<Uint8Array|null>{
+  if(!request.body)return null;const reader=request.body.getReader(),chunks:Uint8Array[]=[];let total=0;
+  for(;;){const {done,value}=await reader.read();if(done)break;if(value){total+=value.byteLength;if(total>maxBytes){await reader.cancel();return null}chunks.push(value)}}
+  if(!total)return null;const result=new Uint8Array(total);let offset=0;for(const chunk of chunks){result.set(chunk,offset);offset+=chunk.byteLength}return result;
+}
+
+export async function uploadClientLogo(request:Request,env:Env,actor:Principal,clientId:string,rid:string):Promise<Response>{
+  const client=await env.DB.prepare("SELECT id,drive_folder_id,logo_drive_file_id,branding_json FROM clients WHERE id=?1 AND status!='trashed'").bind(clientId).first<{id:string;drive_folder_id:string|null;logo_drive_file_id:string|null;branding_json:string}>();
+  if(!client)return error(404,'client_not_found','Cliente não encontrado.',rid);if(!client.drive_folder_id)return error(409,'client_drive_missing','A pasta privada do cliente não está disponível.',rid);
+  const bytes=await boundedBody(request,LOGO_MAX_BYTES);if(!bytes)return error(413,'logo_too_large','Envie uma imagem PNG, JPEG ou WebP de até 2 MB.',rid);
+  const mime=detectedLogoMime(bytes),declared=request.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
+  if(!mime||!['image/png','image/jpeg','image/jpg','image/webp'].includes(declared||'')||(declared==='image/jpg'?'image/jpeg':declared)!==mime)return error(415,'invalid_logo','O conteúdo precisa ser uma imagem PNG, JPEG ou WebP válida.',rid);
+  const extension=mime==='image/png'?'png':mime==='image/webp'?'webp':'jpg';let fileId:string;
+  try{fileId=await uploadSmallDriveFile(env,{name:`logo-${clientId}.${extension}`,mimeType:mime,parentId:client.drive_folder_id,bytes,entityType:'client_logo',entityId:clientId})}catch{return error(502,'drive_unavailable','O Drive não recebeu a identidade visual.',rid)}
+  let branding:Record<string,unknown>={};try{branding=JSON.parse(client.branding_json||'{}')}catch{}branding.logo=true;branding.logoMime=mime;
+  await env.DB.prepare('UPDATE clients SET logo_drive_file_id=?2,branding_json=?3,updated_at=CURRENT_TIMESTAMP WHERE id=?1').bind(clientId,fileId,JSON.stringify(branding)).run();
+  let previousRemoved=true;if(client.logo_drive_file_id&&client.logo_drive_file_id!==fileId)try{await trashDriveFile(env,client.logo_drive_file_id)}catch{previousRemoved=false}
+  await audit(env,{requestId:rid,actorType:'admin',actorId:actor.userId,action:'client.logo_updated',targetType:'client',targetId:clientId,metadata:{mime,sizeBytes:bytes.byteLength,previousRemoved}});return json({clientId,logo:true,mime});
+}
+
+export async function removeClientLogo(env:Env,actor:Principal,clientId:string,rid:string):Promise<Response>{
+  const client=await env.DB.prepare("SELECT logo_drive_file_id,branding_json FROM clients WHERE id=?1 AND status!='trashed'").bind(clientId).first<{logo_drive_file_id:string|null;branding_json:string}>();
+  if(!client)return error(404,'client_not_found','Cliente não encontrado.',rid);if(!client.logo_drive_file_id)return json({clientId,logo:false});
+  try{await trashDriveFile(env,client.logo_drive_file_id)}catch{return error(502,'drive_unavailable','O Drive não removeu a identidade visual.',rid)}
+  let branding:Record<string,unknown>={};try{branding=JSON.parse(client.branding_json||'{}')}catch{}delete branding.logo;delete branding.logoMime;
+  await env.DB.prepare('UPDATE clients SET logo_drive_file_id=NULL,branding_json=?2,updated_at=CURRENT_TIMESTAMP WHERE id=?1').bind(clientId,JSON.stringify(branding)).run();
+  await audit(env,{requestId:rid,actorType:'admin',actorId:actor.userId,action:'client.logo_removed',targetType:'client',targetId:clientId});return json({clientId,logo:false});
+}
 export async function adminOverview(env:Env):Promise<Response>{
   const [counts,jobs,failures,assets]=await Promise.all([
     env.DB.prepare(`SELECT (SELECT count(*) FROM clients WHERE status='active') clients,(SELECT count(*) FROM projects WHERE status!='trashed') projects,(SELECT count(*) FROM assets WHERE status!='trashed') assets,(SELECT count(*) FROM users WHERE status='active') users`).first(),
@@ -50,11 +87,18 @@ export async function restoreEntity(env:Env,actor:Principal,kind:keyof typeof ta
 }
 export async function updateEntity(request:Request,env:Env,actor:Principal,kind:'client'|'project'|'capture'|'asset',id:string,rid:string):Promise<Response>{
   let input:Record<string,unknown>;try{input=await readJson(request)}catch{return error(400,'invalid_json','Dados inválidos.',rid)}
+  if(kind==='capture'&&input.metrics&&typeof input.metrics==='object'&&!Array.isArray(input.metrics)){input.metrics_json=input.metrics;delete input.metrics}
   const allowed=kind==='client'?['name','legal_name','primary_contact_name','email','phone','notes','status','branding_json']:
-    kind==='project'?['name','description','location_text','status','visibility','settings_json']:
+    kind==='project'?['name','description','location_text','latitude','longitude','cover_asset_id','status','visibility','settings_json']:
     kind==='capture'?['title','description','captured_at','status','metrics_json']:
     ['title','type','downloadable','status','metadata_json'];
   const entries=Object.entries(input).filter(([k])=>allowed.includes(k));if(!entries.length)return error(400,'empty_update','Nenhuma alteração válida.',rid);
+  if(entries.some(([key,value])=>['name','title'].includes(key)&&(!String(value||'').trim()||String(value).length>180)))return error(400,'invalid_name','Informe um nome válido.',rid);
+  if(kind==='capture'&&input.captured_at&&Number.isNaN(Date.parse(String(input.captured_at))))return error(400,'invalid_capture_date','Informe uma data de captação válida.',rid);
+  if(kind==='project'&&input.visibility&&!['private','shared','public_demo'].includes(String(input.visibility)))return error(400,'invalid_visibility','Visibilidade inválida.',rid);
+  if(kind==='project'&&input.cover_asset_id){const cover=await env.DB.prepare("SELECT id FROM assets WHERE id=?1 AND project_id=?2 AND type='photo' AND status='published'").bind(input.cover_asset_id,id).first();if(!cover)return error(400,'invalid_cover','A capa precisa ser uma fotografia publicada deste projeto.',rid)}
+  if(kind==='project'&&input.latitude!==undefined&&(typeof input.latitude!=='number'||!Number.isFinite(input.latitude)||input.latitude< -90||input.latitude>90))return error(400,'invalid_coordinates','Latitude inválida.',rid);
+  if(kind==='project'&&input.longitude!==undefined&&(typeof input.longitude!=='number'||!Number.isFinite(input.longitude)||input.longitude< -180||input.longitude>180))return error(400,'invalid_coordinates','Longitude inválida.',rid);
   for(const [k,v] of entries)if((k.endsWith('_json'))&&typeof v!=='string')input[k]=JSON.stringify(v);
   const table=kind==='client'?'clients':kind==='project'?'projects':kind==='capture'?'captures':'assets';
   const sets=entries.map(([k],i)=>`${k}=?${i+2}`).join(',');const stmt=env.DB.prepare(`UPDATE ${table} SET ${sets},updated_at=CURRENT_TIMESTAMP WHERE id=?1 AND status!='trashed'`).bind(id,...entries.map(([k])=>input[k]??null));const result=await stmt.run();

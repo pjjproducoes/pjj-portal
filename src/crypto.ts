@@ -9,6 +9,41 @@ function base64UrlToBytes(value: string): Uint8Array {
   return Uint8Array.from(atob(padded), char => char.charCodeAt(0));
 }
 
+export function encodeBase64Url(value: string): string {
+  return bytesToBase64Url(new TextEncoder().encode(value));
+}
+
+export function decodeBase64Url(value: string): string | null {
+  try { return new TextDecoder().decode(base64UrlToBytes(value)); }
+  catch { return null; }
+}
+
+async function hmacKey(secret: string): Promise<CryptoKey> {
+  return crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign', 'verify']
+  );
+}
+
+export async function signValue(value: string, secret: string): Promise<string> {
+  const signature = await crypto.subtle.sign('HMAC', await hmacKey(secret), new TextEncoder().encode(value));
+  return bytesToBase64Url(new Uint8Array(signature));
+}
+
+export async function verifyValue(value: string, signature: string, secret: string): Promise<boolean> {
+  try {
+    return crypto.subtle.verify(
+      'HMAC',
+      await hmacKey(secret),
+      base64UrlToBytes(signature).buffer as ArrayBuffer,
+      new TextEncoder().encode(value)
+    );
+  } catch { return false; }
+}
+
 export function randomToken(size = 32): string {
   return bytesToBase64Url(crypto.getRandomValues(new Uint8Array(size)));
 }

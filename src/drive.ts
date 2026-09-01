@@ -112,11 +112,29 @@ export async function uploadChunk(env: Env, sessionUrl: string, body: ReadableSt
   });
 }
 
-export async function streamFile(env: Env, fileId: string, range: string | null): Promise<Response> {
+export async function streamFile(env: Env, fileId: string, range: string | null, method:'GET'|'HEAD'='GET'): Promise<Response> {
   const token = await accessToken(env);
   const headers = new Headers({ authorization: `Bearer ${token}` });
   if (range) headers.set('range', range);
-  return fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`, { headers });
+  return fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`, { method, headers });
+}
+
+/** Uploads a small application-managed file without changing its Drive privacy. */
+export async function uploadSmallDriveFile(env:Env,input:{
+  name:string;mimeType:string;parentId:string;bytes:Uint8Array;entityType:string;entityId:string;
+}):Promise<string>{
+  const token=await accessToken(env),boundary=`pjj_${crypto.randomUUID().replaceAll('-','')}`;
+  const metadata=JSON.stringify({
+    name:input.name.slice(0,200),mimeType:input.mimeType,parents:[input.parentId],
+    appProperties:{pjjManaged:'true',pjjEntityType:input.entityType,pjjEntityId:input.entityId}
+  });
+  const media=new Uint8Array(input.bytes.byteLength);media.set(input.bytes);const body=new Blob([
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n`,
+    `--${boundary}\r\nContent-Type: ${input.mimeType}\r\n\r\n`,media.buffer,`\r\n--${boundary}--`
+  ]);
+  const response=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,size,mimeType',{method:'POST',headers:{authorization:`Bearer ${token}`,'content-type':`multipart/related; boundary=${boundary}`},body});
+  if(!response.ok)throw new Error(`drive_small_upload_${response.status}`);
+  const result=await response.json<{id?:string}>();if(!result.id)throw new Error('drive_small_upload_invalid');return result.id;
 }
 
 export async function trashDriveFile(env:Env,fileId:string):Promise<void>{

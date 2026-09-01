@@ -1,14 +1,14 @@
 import type { Env } from './env';
 import type { Principal } from './auth';
 import { streamFile } from './drive';
-import { error, json, safeInlineMime } from './http';
+import { error, json, safeInlineMime, validByteRange } from './http';
 import { audit } from './audit';
 
 function canManage(actor: Principal): boolean { return actor.role === 'owner' || actor.role === 'admin'; }
 
 export async function portalProjects(env: Env, actor: Principal): Promise<Response> {
   const result = await env.DB.prepare(
-    `SELECT p.id,p.name,p.slug,p.description,p.location_text,p.status,p.published_at,c.name client_name,c.branding_json
+    `SELECT p.id,p.name,p.slug,p.description,p.location_text,p.cover_asset_id,p.status,p.published_at,c.name client_name,c.branding_json
      FROM projects p JOIN clients c ON c.id=p.client_id
      WHERE p.status!='trashed' AND (?1 IN ('owner','admin') OR (p.status='published' AND EXISTS(
        SELECT 1 FROM project_members m WHERE m.project_id=p.id AND m.user_id=?2)))
@@ -19,7 +19,8 @@ export async function portalProjects(env: Env, actor: Principal): Promise<Respon
 
 export async function portalProject(env: Env, actor: Principal, projectId: string, rid: string): Promise<Response> {
   const project = await env.DB.prepare(
-    `SELECT p.id,p.name,p.description,p.location_text,p.status,p.settings_json,c.name client_name,c.branding_json
+    `SELECT p.id,p.name,p.description,p.location_text,p.status,p.settings_json,c.name client_name,c.branding_json,
+       CASE WHEN ?2 IN ('owner','admin') THEN 'manage' ELSE (SELECT m.permission FROM project_members m WHERE m.project_id=p.id AND m.user_id=?3) END access_permission
      FROM projects p JOIN clients c ON c.id=p.client_id WHERE p.id=?1 AND p.status!='trashed'
        AND (?2 IN ('owner','admin') OR (p.status='published' AND EXISTS(
          SELECT 1 FROM project_members m WHERE m.project_id=p.id AND m.user_id=?3)))`
@@ -46,6 +47,7 @@ export async function assetContent(request: Request, env: Env, actor: Principal,
   const inlineRequested = new URL(request.url).searchParams.get('inline') === '1';
   const row = await env.DB.prepare(
     `SELECT a.id,a.original_name,a.mime_type,a.original_drive_file_id,a.downloadable,a.status,
+       (SELECT m.permission FROM project_members m WHERE m.project_id=p.id AND m.user_id=?3) member_permission,
        v.drive_file_id variant_drive_file_id,v.mime_type variant_mime_type,v.format
      FROM assets a JOIN projects p ON p.id=a.project_id
      LEFT JOIN asset_variants v ON v.asset_id=a.id AND v.variant_type=?4 AND v.status='ready'
@@ -56,21 +58,24 @@ export async function assetContent(request: Request, env: Env, actor: Principal,
     variant_drive_file_id:string|null;variant_mime_type:string|null;format:string|null;
   }>();
   if (!row) return error(404, 'asset_not_found', 'Arquivo não encontrado.', rid);
-  if (!canManage(actor) && !row.downloadable && !variant) return error(403, 'download_disabled', 'Download não autorizado.', rid);
+  const memberPermission=(row as {member_permission?:string}).member_permission;
+  if (!canManage(actor) && !variant && !((inlineRequested && safeInlineMime(row.mime_type || '')) || (row.downloadable && ['download','manage'].includes(memberPermission||'')))) return error(403, 'download_disabled', 'Download não autorizado.', rid);
   const fileId = variant ? row.variant_drive_file_id : row.original_drive_file_id;
   if (!fileId) return error(409, variant ? 'variant_not_ready' : 'file_not_ready', 'A visualização ainda não está pronta.', rid);
-  const upstream = await streamFile(env, fileId, request.headers.get('range'));
+  const range=request.headers.get('range');if(!validByteRange(range))return error(416,'invalid_range','O intervalo solicitado é inválido.',rid);
+  const upstream = await streamFile(env, fileId, range,request.method==='HEAD'?'HEAD':'GET');
   if (!upstream.ok && upstream.status !== 206) return error(502, 'drive_stream_failed', 'Não foi possível transmitir o arquivo.', rid);
   const responseMime = variant ? row.variant_mime_type || 'application/octet-stream' : row.mime_type || 'application/octet-stream';
   const safeInline = safeInlineMime(responseMime);
   const headers = new Headers({
     'content-type': responseMime,
     'cache-control': 'private, no-store', 'accept-ranges': 'bytes', 'x-content-type-options': 'nosniff',
+    'content-security-policy': "sandbox; default-src 'none'",
     'content-disposition': `${variant || (inlineRequested && safeInline) ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(row.original_name)}`
   });
   for (const name of ['content-length','content-range','etag','last-modified']) {
     const value = upstream.headers.get(name); if (value) headers.set(name, value);
   }
   await audit(env,{requestId:rid,actorType:actor.role==='client'?'client':'admin',actorId:actor.userId,action:variant||inlineRequested?'asset.viewed':'asset.downloaded',targetType:'asset',targetId:assetId,metadata:{variant:variant||null}});
-  return new Response(upstream.body, { status: upstream.status, headers });
+  return new Response(request.method==='HEAD'?null:upstream.body, { status: upstream.status, headers });
 }

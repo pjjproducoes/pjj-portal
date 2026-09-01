@@ -9,16 +9,17 @@ import { createCapture, createClient, createProject, listCaptures, listClients, 
 import { createMfaChallenge, enableMfa, setupMfa, verifyMfaLogin } from './mfa';
 import { adminUi, institutional, invitationUi, portalUi, privacyUi } from './ui';
 import { assetContent, portalProject, portalProjects } from './portal';
-import { acceptInvitation, createPortalUser, listPortalUsers } from './users';
-import { createEmbed, embedAsset, embedPage } from './embeds';
+import { acceptInvitation, createPortalUser, listPortalUsers, updatePortalUser } from './users';
+import { createEmbed, embedAsset, embedLogo, embedPage, embedViewer } from './embeds';
 import { listAssets, publishEntity, retryJob, rollbackAsset, trashEntity, unpublishAsset } from './lifecycle';
 import { viewerPage } from './viewers';
-import { authenticateGrant, createGrant, sharePage, sharedAsset, sharedProject } from './share';
+import { authenticateGrant, createGrant, sharePage, sharedAsset, sharedProject, sharedViewer } from './share';
 import { internalRoute } from './internal';
-import { adminOverview, listAccess, listAudit, listTrash, restoreEntity, revokeAccess, updateEntity } from './admin-ops';
+import { adminOverview, listAccess, listAudit, listTrash, removeClientLogo, restoreEntity, revokeAccess, updateEntity, uploadClientLogo } from './admin-ops';
 import { reviewPage } from './review';
 import { comparisonPage } from './compare';
 import { operationsUi } from './ops-ui';
+import { demoAsset, demoIndex, demoProject, demoViewer } from './demo';
 
 function route(path: string, pattern: RegExp): RegExpMatchArray | null {
   return path.match(pattern);
@@ -115,6 +116,13 @@ export default {
       if (['GET','HEAD'].includes(request.method) && (url.pathname === '/admin' || url.pathname === '/admin/')) return adminUi();
       if (['GET','HEAD'].includes(request.method) && url.pathname === '/admin/operations') return operationsUi();
       if (['GET','HEAD'].includes(request.method) && (url.pathname === '/portal' || url.pathname === '/portal/')) return portalUi();
+      if (['GET','HEAD'].includes(request.method) && (url.pathname === '/demonstracao' || url.pathname === '/demonstracao/')) return demoIndex(env);
+      const publicDemoProject = route(url.pathname, /^\/demonstracao\/([0-9a-f-]{36})$/);
+      if (publicDemoProject?.[1] && request.method === 'GET') return demoProject(env, publicDemoProject[1], rid);
+      const publicDemoViewer = route(url.pathname, /^\/demonstracao\/viewer\/([0-9a-f-]{36})$/);
+      if (publicDemoViewer?.[1] && request.method === 'GET') return demoViewer(env, publicDemoViewer[1], rid);
+      const publicDemoAsset = route(url.pathname, /^\/api\/demo\/assets\/([0-9a-f-]{36})\/content$/);
+      if (publicDemoAsset?.[1] && ['GET','HEAD'].includes(request.method)) return demoAsset(request, env, publicDemoAsset[1], rid);
       const invitePage = route(url.pathname, /^\/invite\/([A-Za-z0-9_-]{40,64})$/);
       if (invitePage?.[1] && request.method === 'GET') return invitationUi(invitePage[1]);
       if (request.method === 'GET' && url.pathname === '/api/health') {
@@ -131,20 +139,26 @@ export default {
       if (url.pathname === '/api/share/project' && request.method === 'GET') return sharedProject(request, env, rid);
       const shareAsset = route(url.pathname, /^\/api\/share\/assets\/([0-9a-f-]{36})\/content$/);
       if (shareAsset?.[1] && ['GET','HEAD'].includes(request.method)) return sharedAsset(request, env, shareAsset[1], rid);
+      const shareViewer = route(url.pathname, /^\/api\/share\/assets\/([0-9a-f-]{36})\/viewer$/);
+      if (shareViewer?.[1] && request.method === 'GET') return sharedViewer(request, env, shareViewer[1], rid);
       const publicEmbed = route(url.pathname, /^\/embed\/([A-Za-z0-9_-]{40,64})$/);
       if (publicEmbed?.[1] && request.method === 'GET') return embedPage(request, env, publicEmbed[1], rid);
+      const publicEmbedViewer = route(url.pathname, /^\/embed\/([A-Za-z0-9_-]{40,64})\/assets\/([0-9a-f-]{36})$/);
+      if (publicEmbedViewer?.[1] && publicEmbedViewer[2] && request.method === 'GET') return embedViewer(request, env, publicEmbedViewer[1], publicEmbedViewer[2], rid);
       const publicEmbedAsset = route(url.pathname, /^\/api\/embed\/([A-Za-z0-9_-]{40,64})\/assets\/([0-9a-f-]{36})\/content$/);
       if (publicEmbedAsset?.[1] && publicEmbedAsset[2] && ['GET','HEAD'].includes(request.method)) return embedAsset(request, env, publicEmbedAsset[1], publicEmbedAsset[2], rid);
+      const publicEmbedLogo = route(url.pathname, /^\/api\/embed\/([A-Za-z0-9_-]{40,64})\/logo$/);
+      if (publicEmbedLogo?.[1] && ['GET','HEAD'].includes(request.method)) return embedLogo(request, env, publicEmbedLogo[1], rid);
 
       const auth = await authenticated(request, env, rid);
       if (auth instanceof Response) return auth;
       const { actor } = auth;
 
       if (request.method === 'GET' && url.pathname === '/api/auth/me') {
-        const user = await env.DB.prepare('SELECT id,email,display_name,role FROM users WHERE id=?1').bind(actor.userId).first();
+        const user = await env.DB.prepare('SELECT id,email,display_name,role,mfa_enabled FROM users WHERE id=?1').bind(actor.userId).first();
         const csrfToken=randomToken();
         await env.DB.prepare('UPDATE sessions SET csrf_hash=?1 WHERE id=?2').bind(await sha256Hex(csrfToken),actor.sessionId).run();
-        return json({ user, csrfToken });
+        return json({ user:{...user,mfaEnabled:actor.mfaEnabled}, csrfToken });
       }
       if (request.method === 'POST' && url.pathname === '/api/auth/logout') {
         await env.DB.prepare('UPDATE sessions SET revoked_at=CURRENT_TIMESTAMP WHERE id=?1').bind(actor.sessionId).run();
@@ -171,6 +185,8 @@ export default {
       if (review?.[1] && request.method === 'GET') return reviewPage(env, actor, review[1], rid);
       if (url.pathname === '/api/admin/users' && request.method === 'GET') return listPortalUsers(env);
       if (url.pathname === '/api/admin/users' && request.method === 'POST') return createPortalUser(request, env, actor, rid);
+      const portalUser=route(url.pathname,/^\/api\/admin\/users\/([0-9a-f-]{36})$/);
+      if(portalUser?.[1]&&request.method==='PATCH')return updatePortalUser(request,env,actor,portalUser[1],rid);
       if (url.pathname === '/api/admin/embeds' && request.method === 'POST') return createEmbed(request, env, actor, rid);
       if (url.pathname === '/api/admin/grants' && request.method === 'POST') return createGrant(request, env, actor, rid);
       if (url.pathname === '/api/admin/assets' && request.method === 'GET') return listAssets(env, url);
@@ -178,6 +194,9 @@ export default {
       if (url.pathname === '/api/admin/access' && request.method === 'GET') return listAccess(env);
       if (url.pathname === '/api/admin/audit' && request.method === 'GET') return listAudit(env,url);
       if (url.pathname === '/api/admin/trash' && request.method === 'GET') return listTrash(env);
+      const clientLogo = route(url.pathname, /^\/api\/admin\/clients\/([0-9a-f-]{36})\/logo$/);
+      if(clientLogo?.[1]&&request.method==='POST')return uploadClientLogo(request,env,actor,clientLogo[1],rid);
+      if(clientLogo?.[1]&&request.method==='DELETE')return removeClientLogo(env,actor,clientLogo[1],rid);
       const revoke = route(url.pathname, /^\/api\/admin\/(grants|embeds|sessions)\/([0-9a-f-]{36})\/revoke$/);
       if(revoke?.[1]&&revoke[2]&&request.method==='POST')return revokeAccess(env,actor,revoke[1].slice(0,-1) as 'grant'|'embed'|'session',revoke[2],rid);
       const restore = route(url.pathname, /^\/api\/admin\/(clients|projects|captures|assets)\/([0-9a-f-]{36})\/restore$/);

@@ -24,7 +24,7 @@ function page(url: URL): { limit: number; offset: number } {
 export async function listClients(env: Env, url: URL): Promise<Response> {
   const { limit, offset } = page(url);
   const result = await env.DB.prepare(
-    `SELECT id,name,legal_name,primary_contact_name,email,phone,notes,branding_json,status,created_at,updated_at
+    `SELECT id,name,legal_name,primary_contact_name,email,phone,notes,branding_json,status,logo_drive_file_id IS NOT NULL has_logo,created_at,updated_at
      FROM clients WHERE status!='trashed' ORDER BY name LIMIT ?1 OFFSET ?2`
   ).bind(limit, offset).all();
   return json({ items: result.results, limit, offset });
@@ -59,7 +59,7 @@ export async function listProjects(env: Env, url: URL): Promise<Response> {
   const { limit, offset } = page(url);
   const clientId = url.searchParams.get('clientId');
   const result = await env.DB.prepare(
-    `SELECT p.id,p.client_id,p.name,p.slug,p.description,p.location_text,p.status,p.visibility,p.created_at,p.updated_at,c.name client_name
+    `SELECT p.id,p.client_id,p.name,p.slug,p.description,p.location_text,p.latitude,p.longitude,p.cover_asset_id,p.status,p.visibility,p.settings_json,p.created_at,p.updated_at,c.name client_name
      FROM projects p JOIN clients c ON c.id=p.client_id
      WHERE p.status!='trashed' AND (?1 IS NULL OR p.client_id=?1)
      ORDER BY p.updated_at DESC LIMIT ?2 OFFSET ?3`
@@ -72,6 +72,7 @@ export async function createProject(request: Request, env: Env, actor: Principal
   try { input = await readJson(request); } catch { return error(400, 'invalid_json', 'Dados inválidos.', rid); }
   const name = clean(input.name, 180);
   const clientId = clean(input.clientId, 50);
+  const visibility=['private','shared','public_demo'].includes(String(input.visibility||''))?String(input.visibility):'private';
   if (!name || !clientId) return error(400, 'invalid_project', 'Cliente e nome do projeto são obrigatórios.', rid);
   const client = await env.DB.prepare("SELECT id,drive_folder_id FROM clients WHERE id=?1 AND status='active'").bind(clientId).first<{ id:string; drive_folder_id:string }>();
   if (!client) return error(404, 'client_not_found', 'Cliente não encontrado.', rid);
@@ -88,11 +89,11 @@ export async function createProject(request: Request, env: Env, actor: Principal
   const duplicate = await env.DB.prepare('SELECT 1 found FROM projects WHERE client_id=?1 AND slug=?2').bind(clientId, projectSlug).first();
   if (duplicate) projectSlug += '-' + id.slice(0, 8);
   await env.DB.prepare(
-    `INSERT INTO projects(id,client_id,name,slug,description,location_text,drive_folder_id)
-     VALUES(?1,?2,?3,?4,?5,?6,?7)`
-  ).bind(id, clientId, name, projectSlug, clean(input.description, 5000) ?? null, clean(input.location, 300) ?? null, projectFolder).run();
+    `INSERT INTO projects(id,client_id,name,slug,description,location_text,visibility,drive_folder_id)
+     VALUES(?1,?2,?3,?4,?5,?6,?7,?8)`
+  ).bind(id, clientId, name, projectSlug, clean(input.description, 5000) ?? null, clean(input.location, 300) ?? null, visibility, projectFolder).run();
   await audit(env, { requestId: rid, actorType: 'admin', actorId: actor.userId, action: 'project.created', targetType: 'project', targetId: id });
-  return json({ project: { id, clientId, name, slug: projectSlug, status: 'draft', driveFolderReady: true } }, 201);
+  return json({ project: { id, clientId, name, slug: projectSlug, status: 'draft', visibility, driveFolderReady: true } }, 201);
 }
 
 export async function listCaptures(env: Env, projectId: string): Promise<Response> {

@@ -52,6 +52,12 @@ export function safeInlineMime(value: string): boolean {
   return /^(image\/(jpeg|png|webp|gif)|video\/(mp4|webm)|audio\/(mpeg|mp4|ogg)|application\/pdf|model\/gltf-binary)$/.test(value.toLowerCase());
 }
 
+export function validByteRange(value:string|null):boolean{
+  if(value===null)return true;const match=value.match(/^bytes=(\d*)-(\d*)$/);if(!match||(!match[1]&&!match[2]))return false;
+  const start=match[1]?Number(match[1]):null,end=match[2]?Number(match[2]):null;
+  return (start===null||Number.isSafeInteger(start))&&(end===null||Number.isSafeInteger(end))&&(start===null||end===null||end>=start);
+}
+
 export async function readJson<T>(request: Request, maxBytes = 64 * 1024): Promise<T> {
   const length = Number(request.headers.get('content-length') || 0);
   if (length > maxBytes) throw new Error('payload_too_large');

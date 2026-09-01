@@ -11,7 +11,7 @@ const CHUNK_SIZE = 8 * 1024 * 1024;
 interface StartUpload {
   projectId: string;
   captureId?: string;
-  type: string;
+  type?: string;
   title?: string;
   fileName: string;
   mimeType?: string;
@@ -19,15 +19,29 @@ interface StartUpload {
   replacesAssetId?: string;
 }
 
+export function inferAssetType(fileName:string,mimeType:string,declared?:string):string{
+  if(declared&&declared!=='auto'&&TYPES.has(declared))return declared;
+  const extension=fileName.toLowerCase().split('.').pop()||'',mime=mimeType.toLowerCase();
+  if(['tif','tiff','geotiff'].includes(extension)||mime.includes('tiff'))return 'orthophoto';
+  if(['las','laz','copc'].includes(extension))return 'point_cloud';
+  if(['glb','gltf','obj','fbx','dae','ply','stl'].includes(extension))return 'model_3d';
+  if(extension==='pdf'||mime==='application/pdf')return 'pdf';
+  if(mime.startsWith('image/')||['jpg','jpeg','png','webp','heic'].includes(extension))return 'photo';
+  if(mime.startsWith('video/')||['mp4','mov','m4v','webm','avi'].includes(extension))return 'video';
+  if(['doc','docx','xls','xlsx','csv','txt'].includes(extension))return 'document';
+  return 'other';
+}
+
 export async function startUpload(request: Request, env: Env, actor: Principal, rid: string): Promise<Response> {
   let input: StartUpload;
   try { input = await readJson<StartUpload>(request); }
   catch { return error(400, 'invalid_json', 'Os dados do arquivo são inválidos.', rid); }
   const name = input.fileName?.trim();
-  if (!name || name.length > 255 || /[\/\0]/.test(name) || !TYPES.has(input.type) ||
+  if (!name || name.length > 255 || /[\/\0]/.test(name) || (input.type!=='auto'&&input.type!==undefined&&!TYPES.has(input.type)) ||
       !Number.isSafeInteger(input.sizeBytes) || input.sizeBytes < 1 || input.sizeBytes > 5 * 1024 ** 4) {
     return error(400, 'invalid_upload_metadata', 'Nome, tipo ou tamanho do arquivo é inválido.', rid);
   }
+  const assetType=inferAssetType(name,input.mimeType||'',input.type);
   const project = await env.DB.prepare(
     `SELECT p.id,p.drive_folder_id FROM projects p
      WHERE p.id=?1 AND p.status NOT IN ('trashed','archived')
@@ -88,14 +102,14 @@ export async function startUpload(request: Request, env: Env, actor: Principal, 
     env.DB.prepare(
       `INSERT INTO assets(id,project_id,capture_id,type,title,original_name,mime_type,size_bytes,version,replaces_asset_id,status)
        VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,'uploading')`
-    ).bind(assetId, input.projectId, input.captureId ?? null, input.type, input.title?.trim() || name, name, mime, input.sizeBytes, version, replacesAssetId),
+    ).bind(assetId, input.projectId, input.captureId ?? null, assetType, input.title?.trim() || name, name, mime, input.sizeBytes, version, replacesAssetId),
     env.DB.prepare(
       `INSERT INTO upload_sessions(id,asset_id,drive_session_url_ciphertext,total_bytes,chunk_size_bytes,expires_at)
        VALUES(?1,?2,?3,?4,?5,datetime('now','+23 hours'))`
     ).bind(uploadId, assetId, encryptedUrl, input.sizeBytes, CHUNK_SIZE)
   ]);
-  await audit(env, { requestId: rid, actorType: 'admin', actorId: actor.userId, action: 'upload.started', targetType: 'asset', targetId: assetId, metadata: { sizeBytes: input.sizeBytes, type: input.type, version, replacesAssetId } });
-  return json({ uploadId, assetId, chunkSize: CHUNK_SIZE, receivedBytes: 0, expiresInSeconds: 82_800 }, 201);
+  await audit(env, { requestId: rid, actorType: 'admin', actorId: actor.userId, action: 'upload.started', targetType: 'asset', targetId: assetId, metadata: { sizeBytes: input.sizeBytes, declaredType: input.type||'auto', inferredType:assetType, version, replacesAssetId } });
+  return json({ uploadId, assetId, inferredType:assetType, chunkSize: CHUNK_SIZE, receivedBytes: 0, expiresInSeconds: 82_800 }, 201);
 }
 
 export async function uploadStatus(env: Env, actor: Principal, uploadId: string, rid: string): Promise<Response> {

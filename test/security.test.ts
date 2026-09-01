@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { hostname, validDomain } from '../src/embeds';
-import { safeInlineMime, sessionCookie } from '../src/http';
+import { safeInlineMime, sessionCookie, validByteRange } from '../src/http';
 
 describe('embed domain isolation', () => {
   it('accepts the exact host and its subdomains', () => {
@@ -28,5 +28,14 @@ describe('media and cookie hardening', () => {
     expect(value).toContain('HttpOnly');
     expect(value).toContain('Secure');
     expect(value).toContain('SameSite=Strict');
+  });
+
+  it('accepts one bounded byte range and rejects amplification ranges', () => {
+    expect(validByteRange('bytes=0-1048575')).toBe(true);
+    expect(validByteRange('bytes=1048576-')).toBe(true);
+    expect(validByteRange('bytes=-4096')).toBe(true);
+    expect(validByteRange('bytes=10-1')).toBe(false);
+    expect(validByteRange('bytes=0-1,20-30')).toBe(false);
+    expect(validByteRange('items=0-1')).toBe(false);
   });
 });
