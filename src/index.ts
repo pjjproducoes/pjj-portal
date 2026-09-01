@@ -15,7 +15,7 @@ import { listAssets, publishEntity, retryJob, trashEntity } from './lifecycle';
 import { viewerPage } from './viewers';
 import { authenticateGrant, createGrant, sharePage, sharedAsset, sharedProject } from './share';
 import { internalRoute } from './internal';
-import { adminOverview, listAccess, listAudit, restoreEntity, revokeAccess, updateEntity } from './admin-ops';
+import { adminOverview, listAccess, listAudit, listTrash, restoreEntity, revokeAccess, updateEntity } from './admin-ops';
 import { reviewPage } from './review';
 import { comparisonPage } from './compare';
 import { operationsUi } from './ops-ui';
@@ -177,6 +177,7 @@ export default {
       if (url.pathname === '/api/admin/overview' && request.method === 'GET') return adminOverview(env);
       if (url.pathname === '/api/admin/access' && request.method === 'GET') return listAccess(env);
       if (url.pathname === '/api/admin/audit' && request.method === 'GET') return listAudit(env,url);
+      if (url.pathname === '/api/admin/trash' && request.method === 'GET') return listTrash(env);
       const revoke = route(url.pathname, /^\/api\/admin\/(grants|embeds|sessions)\/([0-9a-f-]{36})\/revoke$/);
       if(revoke?.[1]&&revoke[2]&&request.method==='POST')return revokeAccess(env,actor,revoke[1].slice(0,-1) as 'grant'|'embed'|'session',revoke[2],rid);
       const restore = route(url.pathname, /^\/api\/admin\/(clients|projects|captures|assets)\/([0-9a-f-]{36})\/restore$/);
