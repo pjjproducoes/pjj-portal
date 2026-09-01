@@ -136,13 +136,15 @@ export async function putChunk(request: Request, env: Env, actor: Principal, upl
 }
 
 export async function cancelUpload(env: Env, actor: Principal, uploadId: string, rid: string): Promise<Response> {
-  const result = await env.DB.prepare(
-    `UPDATE upload_sessions SET status='cancelled',updated_at=CURRENT_TIMESTAMP
-     WHERE id=?1 AND status='active' AND EXISTS(
-       SELECT 1 FROM assets a WHERE a.id=upload_sessions.asset_id AND
-       (?2 IN ('owner','admin') OR EXISTS(SELECT 1 FROM project_members m WHERE m.project_id=a.project_id AND m.user_id=?3 AND m.permission='manage'))
-     )`
-  ).bind(uploadId, actor.role, actor.userId).run();
-  if (!result.meta.changes) return error(404, 'upload_not_found', 'Upload ativo não encontrado.', rid);
-  return json({ status: 'cancelled' });
+  const row=await env.DB.prepare(`SELECT u.asset_id FROM upload_sessions u JOIN assets a ON a.id=u.asset_id
+    WHERE u.id=?1 AND u.status='active' AND (?2 IN ('owner','admin') OR EXISTS(
+      SELECT 1 FROM project_members m WHERE m.project_id=a.project_id AND m.user_id=?3 AND m.permission='manage'))`)
+    .bind(uploadId,actor.role,actor.userId).first<{asset_id:string}>();
+  if(!row)return error(404,'upload_not_found','Upload ativo não encontrado.',rid);
+  await env.DB.batch([
+    env.DB.prepare("UPDATE upload_sessions SET status='cancelled',updated_at=CURRENT_TIMESTAMP WHERE id=?1 AND status='active'").bind(uploadId),
+    env.DB.prepare("UPDATE assets SET status='failed',error_code='upload_cancelled',error_message='Upload cancelado pelo administrador.',updated_at=CURRENT_TIMESTAMP WHERE id=?1 AND status='uploading'").bind(row.asset_id)
+  ]);
+  await audit(env,{requestId:rid,actorType:'admin',actorId:actor.userId,action:'upload.cancelled',targetType:'asset',targetId:row.asset_id});
+  return json({status:'cancelled',assetId:row.asset_id});
 }
