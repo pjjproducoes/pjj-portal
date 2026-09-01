@@ -11,6 +11,9 @@ export async function createGrant(request:Request,env:Env,actor:Principal,rid:st
   let input:{projectId:string;label?:string;pin?:string;expiresAt?:string;maxUses?:number;permission?:'view'|'download'};try{input=await readJson(request)}catch{return error(400,'invalid_json','Dados inválidos.',rid)}
   const project=await env.DB.prepare("SELECT id FROM projects WHERE id=?1 AND status!='trashed'").bind(input.projectId).first();if(!project)return error(404,'project_not_found','Projeto não encontrado.',rid);
   if(input.pin&&!/^\d{4,10}$/.test(input.pin))return error(400,'invalid_pin','Use um PIN de 4 a 10 dígitos.',rid);
+  if(input.permission&&input.permission!=='view'&&input.permission!=='download')return error(400,'invalid_permission','Permissão de link inválida.',rid);
+  if(input.expiresAt&&(!Number.isFinite(Date.parse(input.expiresAt))||Date.parse(input.expiresAt)<=Date.now()))return error(400,'invalid_expiry','A validade precisa ser uma data futura.',rid);
+  if(input.maxUses!==undefined&&(!Number.isSafeInteger(input.maxUses)||input.maxUses<1||input.maxUses>100000))return error(400,'invalid_max_uses','O limite de acessos é inválido.',rid);
   const token=randomToken(),tokenHash=await sha256Hex(token),id=crypto.randomUUID(),pinHash=input.pin?await sha256Hex(tokenHash+':'+input.pin):null;
   await env.DB.prepare('INSERT INTO access_grants(id,project_id,label,token_hash,pin_hash,permission,expires_at,max_uses,created_by) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9)')
     .bind(id,input.projectId,input.label?.trim()||null,tokenHash,pinHash,input.permission||'view',input.expiresAt||null,input.maxUses||null,actor.userId).run();

@@ -14,6 +14,7 @@ export async function createEmbed(request:Request,env:Env,actor:Principal,rid:st
   try{input=await readJson(request)}catch{return error(400,'invalid_json','Dados inválidos.',rid)}
   const domains=[...new Set((input.domains||[]).map(x=>hostname(x.includes('://')?x:`https://${x}`)).filter((x):x is string=>!!x))];
   if(!input.projectId||!input.name?.trim()||!domains.length)return error(400,'invalid_embed','Projeto, nome e domínio são obrigatórios.',rid);
+  if(input.expiresAt&&(!Number.isFinite(Date.parse(input.expiresAt))||Date.parse(input.expiresAt)<=Date.now()))return error(400,'invalid_expiry','A validade precisa ser uma data futura.',rid);
   const project=await env.DB.prepare("SELECT p.id,c.name client_name,c.branding_json FROM projects p JOIN clients c ON c.id=p.client_id WHERE p.id=?1 AND p.status!='trashed'").bind(input.projectId).first<{id:string;client_name:string;branding_json:string}>();
   if(!project)return error(404,'project_not_found','Projeto não encontrado.',rid);
   const token=randomToken(),id=crypto.randomUUID(),clientBrand=JSON.parse(project.branding_json||'{}');
