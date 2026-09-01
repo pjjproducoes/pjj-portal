@@ -24,7 +24,7 @@ function page(url: URL): { limit: number; offset: number } {
 export async function listClients(env: Env, url: URL): Promise<Response> {
   const { limit, offset } = page(url);
   const result = await env.DB.prepare(
-    `SELECT id,name,legal_name,primary_contact_name,email,phone,status,created_at,updated_at
+    `SELECT id,name,legal_name,primary_contact_name,email,phone,notes,branding_json,status,created_at,updated_at
      FROM clients WHERE status!='trashed' ORDER BY name LIMIT ?1 OFFSET ?2`
   ).bind(limit, offset).all();
   return json({ items: result.results, limit, offset });
