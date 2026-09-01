@@ -111,6 +111,13 @@ export async function createCapture(request: Request, env: Env, actor: Principal
   const project = await env.DB.prepare("SELECT id,drive_folder_id FROM projects WHERE id=?1 AND status!='trashed'").bind(projectId).first<{ id:string; drive_folder_id:string }>();
   if (!project) return error(404, 'project_not_found', 'Projeto não encontrado.', rid);
   const id = crypto.randomUUID();
+  const rawMetrics=input.metrics && typeof input.metrics==='object'&&!Array.isArray(input.metrics)?input.metrics as Record<string,unknown>:{};
+  const metrics:Record<string,string|number>={};
+  for(const key of ['area','imageCount','gsd','flightAltitude']){
+    const value=rawMetrics[key];
+    if(typeof value==='string'&&value.trim()&&value.trim().length<=80)metrics[key]=value.trim();
+    else if(typeof value==='number'&&Number.isFinite(value))metrics[key]=value;
+  }
   let captureFolder: string;
   try {
     const capturesRoot = await ensureFolder(env, { parentId: project.drive_folder_id, entityType: 'captures_root', entityId: project.id, name: 'Captacoes' });
@@ -125,8 +132,8 @@ export async function createCapture(request: Request, env: Env, actor: Principal
     return error(502, 'drive_unavailable', 'O Drive não criou a estrutura da captação.', rid);
   }
   await env.DB.prepare(
-    'INSERT INTO captures(id,project_id,captured_at,title,description,drive_folder_id) VALUES(?1,?2,?3,?4,?5,?6)'
-  ).bind(id, projectId, new Date(capturedAt).toISOString(), clean(input.title, 180), clean(input.description, 4000), captureFolder).run();
+    'INSERT INTO captures(id,project_id,captured_at,title,description,metrics_json,drive_folder_id) VALUES(?1,?2,?3,?4,?5,?6,?7)'
+  ).bind(id, projectId, new Date(capturedAt).toISOString(), clean(input.title, 180), clean(input.description, 4000), JSON.stringify(metrics), captureFolder).run();
   await audit(env, { requestId: rid, actorType: 'admin', actorId: actor.userId, action: 'capture.created', targetType: 'capture', targetId: id });
   return json({ capture: { id, projectId, capturedAt: new Date(capturedAt).toISOString(), status: 'draft', driveFolderReady: true } }, 201);
 }
