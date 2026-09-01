@@ -6,7 +6,7 @@ import { trashDriveFile } from './drive';
 
 export async function listAssets(env:Env,url:URL):Promise<Response>{
   const projectId=url.searchParams.get('projectId'),captureId=url.searchParams.get('captureId');
-  const rows=await env.DB.prepare(`SELECT a.id,a.project_id,a.capture_id,a.type,a.title,a.original_name,a.mime_type,a.size_bytes,a.status,a.error_code,a.error_message,a.created_at,
+  const rows=await env.DB.prepare(`SELECT a.id,a.project_id,a.capture_id,a.type,a.title,a.original_name,a.mime_type,a.size_bytes,a.version,a.replaces_asset_id,a.status,a.error_code,a.error_message,a.created_at,
     j.id job_id,j.status job_status,j.progress job_progress,j.error_message job_error
     FROM assets a LEFT JOIN processing_jobs j ON j.id=(SELECT id FROM processing_jobs WHERE asset_id=a.id ORDER BY queued_at DESC LIMIT 1)
     WHERE a.status!='trashed' AND (?1 IS NULL OR a.project_id=?1) AND (?2 IS NULL OR a.capture_id=?2) ORDER BY a.created_at DESC LIMIT 200`)
