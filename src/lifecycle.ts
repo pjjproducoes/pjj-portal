@@ -31,6 +31,19 @@ export async function publishEntity(env:Env,actor:Principal,kind:'project'|'capt
   await audit(env,{requestId:rid,actorType:'admin',actorId:actor.userId,action:`${kind}.published`,targetType:kind,targetId:id});return json({id,status:'published'});
 }
 
+/** Withdraws a delivery without deleting its original or its processed variants. */
+export async function unpublishAsset(env:Env,actor:Principal,id:string,rid:string):Promise<Response>{
+  const asset=await env.DB.prepare("SELECT id,project_id,capture_id,status FROM assets WHERE id=?1 AND status!='trashed'").bind(id).first<{id:string;project_id:string;capture_id:string|null;status:string}>();
+  if(!asset)return error(404,'asset_not_found','Produto não encontrado.',rid);
+  if(asset.status!=='published')return error(409,'asset_not_published','Este produto não está publicado.',rid);
+  const statements=[env.DB.prepare("UPDATE assets SET status='review',published_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?1").bind(id)];
+  if(asset.capture_id)statements.push(env.DB.prepare(`UPDATE captures SET status='review',published_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?1 AND NOT EXISTS(SELECT 1 FROM assets WHERE capture_id=?1 AND status='published')`).bind(asset.capture_id));
+  statements.push(env.DB.prepare(`UPDATE projects SET status='review',published_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?1 AND NOT EXISTS(SELECT 1 FROM assets WHERE project_id=?1 AND status='published')`).bind(asset.project_id));
+  await env.DB.batch(statements);
+  await audit(env,{requestId:rid,actorType:'admin',actorId:actor.userId,action:'asset.unpublished',targetType:'asset',targetId:id,metadata:{projectId:asset.project_id,captureId:asset.capture_id}});
+  return json({id,status:'review',projectId:asset.project_id,captureId:asset.capture_id});
+}
+
 export async function retryJob(env:Env,actor:Principal,jobId:string,rid:string):Promise<Response>{
   const result=await env.DB.prepare(`UPDATE processing_jobs SET status='queued',attempt=0,progress=0,error_code=NULL,error_message=NULL,next_attempt_at=NULL,queued_at=CURRENT_TIMESTAMP,started_at=NULL,finished_at=NULL
     WHERE id=?1 AND status='failed'`).bind(jobId).run();if(!result.meta.changes)return error(409,'job_not_retryable','O job não está com falha ou não existe.',rid);
