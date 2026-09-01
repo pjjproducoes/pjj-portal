@@ -1,0 +1,1915 @@
+# PROJETO PJJ PRODUÇÕES — REFORMULAÇÃO COMPLETA DO SITE, PORTAL E PLATAFORMA DE ENTREGA
+
+Quero que você assuma este projeto como responsável técnico pela reformulação e implementação completa da plataforma da PJJ Produções.
+
+LEIA TODO ESTE BRIEFING ANTES DE ALTERAR QUALQUER COISA.
+
+Você terá acesso ao Worker/ambiente Cloudflare e ao projeto existente. INSPECIONE TUDO antes de modificar qualquer recurso.
+
+IMPORTANTE:
+O GOOGLE DRIVE DA PJJ JÁ FOI CONFIGURADO PARA SUBSTITUIR O R2 COMO ARMAZENAMENTO DO PROJETO.
+
+Essa decisão JÁ ESTÁ TOMADA e a integração já está funcionando.
+
+NÃO volte a propor R2 como armazenamento.
+NÃO recrie arquitetura baseada em R2.
+NÃO desfaça a integração atual com Google Drive.
+
+Cloudflare continua sendo a infraestrutura da aplicação, processamento, segurança, banco, APIs, filas/workflows etc., enquanto o GOOGLE DRIVE DA PJJ é o armazenamento persistente dos arquivos.
+
+======================================================================
+1. REGRA DE AUTONOMIA
+======================================================================
+
+A regra principal deste trabalho é:
+
+NÃO ME INTERROMPA PARA DECISÕES QUE VOCÊ CONSEGUE TOMAR TECNICAMENTE SOZINHO.
+
+Não quero ser solicitado a confirmar cada arquivo, rota, migration, biblioteca, nome de tabela, componente, implementação, correção ou etapa.
+
+Tome as decisões técnicas necessárias, pesquise profundamente a documentação atual da Cloudflare e das demais tecnologias utilizadas quando necessário, implemente, teste e avance.
+
+Antes de perguntar qualquer coisa, tente resolver sozinho através de:
+
+- inspeção do projeto existente;
+- inspeção dos recursos Cloudflare disponíveis;
+- documentação oficial;
+- código existente;
+- integrações existentes;
+- logs;
+- testes;
+- APIs disponíveis.
+
+Só me peça intervenção quando REALMENTE depender de mim, por exemplo:
+
+- login/autorização que somente eu possa realizar;
+- 2FA;
+- credencial inacessível para você;
+- contratação/ativação de recurso com custo relevante;
+- decisão comercial/subjetiva impossível de inferir;
+- ação destrutiva irreversível sem alternativa segura.
+
+Fora desses casos, resolva sozinho.
+
+Não fique perguntando:
+
+“Posso continuar?”
+“Quer que eu implemente?”
+“Qual opção você prefere?”
+
+quando houver uma solução técnica claramente superior.
+
+======================================================================
+2. CONTEXTO DA PJJ
+======================================================================
+
+Empresa:
+
+PJJ PRODUÇÕES
+
+Posicionamento institucional:
+
+“Produção audiovisual • Imagens aéreas • Soluções com drones”
+
+A PJJ originalmente atua com audiovisual e está expandindo sua atuação para imagens aéreas, acompanhamento de obras e produtos fotogramétricos.
+
+NÃO transformar a PJJ em empresa de:
+
+- engenharia;
+- topografia;
+- agrimensura.
+
+A plataforma deve permitir apresentar e entregar produtos como:
+
+- fotografia aérea;
+- vídeo aéreo;
+- acompanhamento visual de obras;
+- ortofoto/ortomosaico;
+- modelo 3D fotogramétrico;
+- DSM;
+- DTM;
+- nuvem de pontos;
+- relatórios;
+- fotografias;
+- vídeos;
+- documentos;
+- outros arquivos técnicos.
+
+Neste momento, produtos produzidos sem infraestrutura específica de precisão topográfica devem ser apresentados principalmente como:
+
+DOCUMENTAÇÃO E ACOMPANHAMENTO VISUAL.
+
+Não fazer promessas indevidas de precisão topográfica.
+
+======================================================================
+3. IDENTIDADE VISUAL
+======================================================================
+
+A identidade existente da PJJ deve ser preservada.
+
+NÃO redesenhar a logo.
+
+NÃO descaracterizar a empresa.
+
+Quero elevar drasticamente:
+
+- design;
+- interface;
+- experiência;
+- consistência;
+- responsividade;
+- apresentação comercial;
+- percepção de qualidade;
+- profissionalismo.
+
+Mas mantendo a essência visual existente da PJJ.
+
+Não quero aparência genérica de template SaaS.
+
+O produto precisa parecer da PJJ.
+
+======================================================================
+4. MUDANÇA FUNDAMENTAL EM RELAÇÃO AO PROJETO ANTIGO
+======================================================================
+
+EXCLUIR DA NOVA ARQUITETURA TODA DEPENDÊNCIA DO MEU COMPUTADOR.
+
+Anteriormente existiam coisas como:
+
+- agente Windows;
+- heartbeat;
+- WebODM conversando com Worker;
+- controle remoto;
+- publicação automática pelo PC;
+- máquina acordando;
+- monitoramento de processamento local;
+- integração PC ↔ site.
+
+ISSO ACABOU.
+
+O computador NÃO conversa mais com o site.
+
+O processamento fotogramétrico pode continuar sendo realizado separadamente por mim.
+
+Quando estiver pronto:
+
+EU PROCESSO OS DADOS
+↓
+ENTRO NO ADMINISTRATIVO
+↓
+CRIO CLIENTE/PROJETO/CAPTAÇÃO
+↓
+ADICIONO OS ARQUIVOS MANUALMENTE
+↓
+OS ARQUIVOS SÃO ARMAZENADOS NO GOOGLE DRIVE DA PJJ
+↓
+A PLATAFORMA DISPARA AUTOMATICAMENTE O PROCESSAMENTO NECESSÁRIO
+↓
+A CLOUDFLARE PREPARA AS REPRESENTAÇÕES WEB
+↓
+O PROJETO É PUBLICADO NO PORTAL
+
+Portanto:
+
+UPLOAD MANUAL.
+
+TODO O RESTANTE AUTOMÁTICO.
+
+======================================================================
+5. GOOGLE DRIVE É O ARMAZENAMENTO DEFINITIVO
+======================================================================
+
+ATENÇÃO:
+
+O R2 FOI SUBSTITUÍDO PELO GOOGLE DRIVE DA PJJ.
+
+A integração com Drive já está funcionando.
+
+Não altere essa decisão.
+
+O Google Drive deverá armazenar os arquivos persistentes do projeto, incluindo quando aplicável:
+
+- GeoTIFF original;
+- COG;
+- GLB/GLTF;
+- OBJ e dependências;
+- LAS/LAZ;
+- DSM;
+- DTM;
+- PDF;
+- fotos;
+- vídeos;
+- relatórios;
+- derivados;
+- previews;
+- thumbnails;
+- arquivos necessários aos visualizadores.
+
+A aplicação NÃO deve depender de links públicos permanentes do Google Drive.
+
+O Drive deve funcionar como armazenamento privado.
+
+A aplicação deverá controlar:
+
+- quem pode acessar;
+- qual arquivo pode acessar;
+- quando pode acessar;
+- downloads;
+- visualizações;
+- revogação;
+- expiração;
+- auditoria.
+
+Se for necessário utilizar cache/CDN/proxy através da Cloudflare para tornar os viewers rápidos, implementar isso SEM substituir o Drive como armazenamento persistente.
+
+Em outras palavras:
+
+GOOGLE DRIVE = STORAGE / SOURCE OF TRUTH
+
+CLOUDFLARE = APLICAÇÃO + SEGURANÇA + PROCESSAMENTO + CONTROLE + ENTREGA/CACHE QUANDO NECESSÁRIO
+
+======================================================================
+6. OBJETIVO DA PLATAFORMA
+======================================================================
+
+Não quero “um site bonito com uma área do cliente”.
+
+Quero uma PLATAFORMA PROFISSIONAL COMPLETA.
+
+Pense no nível de confiança, segurança e acabamento de:
+
+- portal de laboratório;
+- portal médico;
+- sistema bancário;
+- plataforma SaaS B2B;
+- plataforma técnica profissional.
+
+A solução deverá possuir pelo menos quatro grandes áreas:
+
+1. SITE INSTITUCIONAL DA PJJ
+2. PAINEL ADMINISTRATIVO PRIVADO
+3. PORTAL SEGURO DO CLIENTE
+4. SISTEMA B2B2C / EMBED / WHITE-LABEL
+
+Tudo integrado.
+
+======================================================================
+7. SITE INSTITUCIONAL
+======================================================================
+
+Criar um site institucional realmente completo para:
+
+PJJ Produções
+Produção audiovisual • Imagens aéreas • Soluções com drones
+
+Deve apresentar adequadamente:
+
+- empresa;
+- serviços;
+- audiovisual;
+- imagens aéreas;
+- soluções com drones;
+- acompanhamento de obras;
+- fotogrametria;
+- ortofotos;
+- modelos 3D;
+- portfólio/cases;
+- contato;
+- acesso do cliente;
+- demais páginas que façam sentido.
+
+NÃO quero textos superficiais.
+
+Quando apresentar ORTOFOTO, explicar:
+
+- o que é;
+- como é produzida;
+- o que o cliente recebe;
+- como é visualizada;
+- aplicações;
+- limitações quando relevantes.
+
+Quando apresentar MODELO 3D:
+
+- explicar;
+- demonstrar;
+- permitir interação real quando houver case disponível.
+
+Quando possível, o próprio site público deverá possuir demonstrações INTERATIVAS.
+
+Não utilizar screenshot fingindo ser visualizador.
+
+======================================================================
+8. PAINEL ADMINISTRATIVO DA PJJ
+======================================================================
+
+Criar uma área administrativa privada profissional.
+
+Estrutura conceitual:
+
+CLIENTES
+    ↓
+PROJETOS / EMPREENDIMENTOS
+    ↓
+CAPTAÇÕES / CAMPANHAS
+    ↓
+PRODUTOS / ARQUIVOS
+
+Exemplo:
+
+Cliente:
+Sequóia Urbanismo
+
+Projeto:
+Recanto da Serra II
+
+Captações:
+31/08/2026
+30/09/2026
+31/10/2026
+
+Cada captação poderá possuir:
+
+- ortofoto;
+- DSM;
+- DTM;
+- modelo 3D;
+- nuvem de pontos;
+- relatório;
+- fotos;
+- vídeos;
+- documentos;
+- arquivos originais;
+- outros produtos.
+
+O administrativo deverá permitir gerenciar:
+
+CLIENTES
+- nome;
+- razão social quando necessário;
+- logo;
+- responsável;
+- e-mail;
+- telefone;
+- observações;
+- identidade visual;
+- configurações B2B2C;
+- status.
+
+PROJETOS
+- nome;
+- cliente;
+- localização;
+- descrição;
+- capa;
+- status;
+- datas;
+- configurações;
+- permissões;
+- visibilidade;
+- validade de acessos.
+
+CAPTAÇÕES
+- data;
+- descrição;
+- status;
+- métricas;
+- produtos;
+- arquivos;
+- observações;
+- processamento.
+
+ARQUIVOS
+- upload;
+- tipo;
+- tamanho;
+- formato;
+- status;
+- arquivo original;
+- derivados;
+- download;
+- processamento;
+- exclusão;
+- reprocessamento;
+- vínculo com Google Drive.
+
+ACESSOS
+- criação;
+- revogação;
+- expiração;
+- histórico;
+- permissões;
+- compartilhamento.
+
+EMBEDS
+- domínio permitido;
+- projeto;
+- produtos;
+- branding;
+- expiração;
+- status.
+
+AUDITORIA
+- ações administrativas;
+- acessos;
+- downloads;
+- alterações;
+- falhas;
+- processamento.
+
+Não quero CRUD cru com aparência de painel de desenvolvedor.
+
+Quero um produto administrativo bem desenhado e eficiente.
+
+======================================================================
+9. UPLOAD PROFISSIONAL PARA GOOGLE DRIVE
+======================================================================
+
+Os arquivos podem ser MUITO GRANDES.
+
+O upload deverá ser adequado para:
+
+- GeoTIFFs grandes;
+- modelos 3D;
+- nuvens de pontos;
+- vídeos;
+- conjuntos de fotografias;
+- outros produtos pesados.
+
+Implementar upload resiliente utilizando corretamente a API do Google Drive e upload resumable quando apropriado.
+
+O upload deverá possuir:
+
+- progresso REAL;
+- retomada quando tecnicamente possível;
+- cancelamento;
+- retry;
+- tratamento de conexão interrompida;
+- validação;
+- integridade quando aplicável;
+- feedback de erro;
+- estado persistente;
+- prevenção de duplicidade acidental.
+
+O arquivo ORIGINAL deverá ser preservado.
+
+Não carregar arquivos gigantes inteiros na memória do Worker.
+
+A transferência deverá ser implementada de forma apropriada para arquivos grandes.
+
+======================================================================
+10. PROCESSAMENTO AUTOMÁTICO NA CLOUDFLARE
+======================================================================
+
+ESTA PARTE É OBRIGATÓRIA.
+
+Eu NÃO quero preparar manualmente:
+
+- COG;
+- tiles;
+- PMTiles;
+- Potree;
+- thumbnails;
+- previews;
+- otimizações de modelo;
+- derivados web.
+
+Eu envio o produto original.
+
+A infraestrutura deve preparar automaticamente as representações necessárias para visualização.
+
+Fluxo:
+
+UPLOAD
+↓
+GOOGLE DRIVE
+↓
+JOB/FILA
+↓
+WORKFLOW
+↓
+PROCESSAMENTO
+↓
+VALIDAÇÃO
+↓
+GERAÇÃO DE DERIVADOS
+↓
+DRIVE
+↓
+PUBLICAÇÃO
+
+Pesquisar e utilizar corretamente recursos atuais da Cloudflare, quando fizerem sentido:
+
+- Workers;
+- D1;
+- Queues;
+- Workflows;
+- Containers;
+- Durable Objects;
+- Cache/CDN;
+- Zero Trust/Access;
+- Turnstile;
+- WAF;
+- demais recursos realmente úteis.
+
+Não utilizar um produto Cloudflare apenas por existir.
+
+======================================================================
+11. CONTAINERS E GEOPROCESSAMENTO REAL
+======================================================================
+
+Quero processamento REAL server-side.
+
+Cloudflare Containers deverá ser avaliado/implementado para tarefas que Workers comuns não são adequados para executar.
+
+O ambiente de processamento poderá utilizar ferramentas profissionais como:
+
+- GDAL;
+- PROJ;
+- PDAL;
+- PotreeConverter;
+- ferramentas PMTiles;
+- ferramentas glTF/GLB;
+- FFmpeg;
+- ferramentas de geração de thumbnails/previews;
+- equivalentes tecnicamente superiores.
+
+A escolha final das ferramentas é sua responsabilidade técnica.
+
+Não implemente processamento fictício.
+
+Quando o painel disser:
+
+“Convertendo ortofoto”
+
+deve existir um processamento REAL acontecendo.
+
+Estados esperados:
+
+RECEBIDO
+↓
+VALIDANDO
+↓
+PROCESSANDO
+↓
+GERANDO VISUALIZAÇÃO
+↓
+VALIDANDO RESULTADO
+↓
+PUBLICADO
+
+Se falhar:
+
+FALHOU
+
+e mostrar uma mensagem útil.
+
+Exemplos:
+
+- GeoTIFF sem georreferenciamento;
+- arquivo corrompido;
+- formato incompatível;
+- modelo sem textura;
+- falha de processamento;
+- timeout;
+- problema de armazenamento.
+
+Deverá existir RETRY/REPROCESSAR.
+
+======================================================================
+12. ORTOFOTO — VIEWER REAL
+======================================================================
+
+Não quero:
+
+<img src="orthophoto.jpg">
+
+Quero visualização geoespacial profissional.
+
+O cliente deverá conseguir:
+
+- arrastar;
+- zoom progressivo;
+- visualizar resolução detalhada;
+- tela cheia;
+- resetar enquadramento;
+- visualizar coordenadas quando possível;
+- visualizar escala;
+- alternar camadas;
+- escolher campanhas;
+- comparar datas;
+- visualizar metadata.
+
+O sistema deverá aceitar GeoTIFF e preparar automaticamente uma representação adequada para web.
+
+Avaliar tecnicamente:
+
+- COG;
+- raster tiles;
+- PMTiles;
+- ou arquitetura superior.
+
+O arquivo original permanece no Google Drive.
+
+Os derivados necessários também podem permanecer no Drive, com cache/proxy da Cloudflare quando necessário para desempenho.
+
+O navegador NÃO deverá precisar baixar um GeoTIFF gigantesco inteiro para começar a visualizar.
+
+======================================================================
+13. COMPARAÇÃO TEMPORAL
+======================================================================
+
+Para acompanhamento de obras, implementar comparação entre campanhas.
+
+Exemplo:
+
+31/08/2026
+VERSUS
+30/09/2026
+
+Permitir:
+
+- swipe antes/depois;
+- seleção de datas;
+- alternância rápida;
+- comparação visual;
+- mesma posição/zoom quando tecnicamente possível.
+
+Isso é uma funcionalidade comercial importante.
+
+======================================================================
+14. MODELO 3D — VIEWER REAL
+======================================================================
+
+Modelos 3D devem ser realmente interativos.
+
+Suportar quando apropriado:
+
+- GLB;
+- glTF;
+- formatos de origem que possam ser convertidos automaticamente.
+
+O pipeline deverá:
+
+- validar;
+- converter quando necessário;
+- otimizar;
+- comprimir quando apropriado;
+- preparar texturas;
+- gerar thumbnail;
+- publicar.
+
+Viewer deverá possuir:
+
+- orbit;
+- pan;
+- zoom;
+- reset;
+- fullscreen;
+- loading progress;
+- iluminação adequada;
+- informações;
+- tratamento de modelos grandes;
+- seleção de campanhas;
+- fallback de erro.
+
+Não usar vídeo do modelo como substituto.
+
+======================================================================
+15. NUVEM DE PONTOS
+======================================================================
+
+LAS/LAZ não deverá simplesmente ser enviado inteiro ao navegador.
+
+Implementar pipeline apropriado para streaming/visualização de grandes nuvens.
+
+Avaliar:
+
+- Potree;
+- EPT;
+- formatos equivalentes;
+- arquitetura superior disponível.
+
+Viewer deverá suportar quando tecnicamente aplicável:
+
+- navegação;
+- densidade;
+- classificação;
+- elevação;
+- clipping;
+- medição visual;
+- atributos;
+- fullscreen;
+- informações.
+
+======================================================================
+16. DSM / DTM
+======================================================================
+
+DSM e DTM devem ser tratados como produtos geoespaciais.
+
+Permitir alternar:
+
+ORTOFOTO
+DSM
+DTM
+
+Quando fizer sentido, gerar automaticamente:
+
+- visualização colorizada;
+- relevo/hillshade;
+- legenda;
+- escala;
+- metadata.
+
+Não transformar tudo simplesmente em JPG estático.
+
+======================================================================
+17. FOTOS, VÍDEOS E DOCUMENTOS
+======================================================================
+
+FOTOS:
+
+- galeria profissional;
+- thumbnails;
+- lazy loading;
+- fullscreen/lightbox;
+- metadata quando apropriado;
+- download conforme permissão.
+
+VÍDEOS:
+
+- player profissional;
+- streaming/otimização quando necessário;
+- thumbnails;
+- fullscreen;
+- proteção adequada.
+
+PDF:
+
+- viewer integrado;
+- download autorizado;
+- metadata;
+- possibilidade de relatório técnico e comercial.
+
+======================================================================
+18. PORTAL DO CLIENTE
+======================================================================
+
+O cliente receberá um link seguro.
+
+Quero sensação semelhante a um portal de laboratório:
+
+o usuário recebe o acesso e entra em uma área privada onde encontra seus projetos e resultados.
+
+NÃO confiar apenas em URL difícil de adivinhar.
+
+Implementar segurança real.
+
+Possíveis mecanismos:
+
+- link + senha;
+- link + código;
+- OTP por e-mail;
+- conta individual;
+- combinação adequada conforme arquitetura.
+
+O sistema deverá suportar:
+
+- expiração;
+- revogação imediata;
+- sessões;
+- permissões;
+- projetos específicos;
+- downloads específicos;
+- logs.
+
+======================================================================
+19. SEGURANÇA
+======================================================================
+
+Segurança é prioridade.
+
+Implementar corretamente, quando aplicável:
+
+- autenticação robusta;
+- autorização por recurso;
+- princípio de menor privilégio;
+- MFA para administrativo;
+- hash seguro de senhas;
+- tokens armazenados por hash;
+- sessões seguras;
+- cookies HttpOnly;
+- Secure;
+- SameSite;
+- CSRF protection;
+- XSS protection;
+- CSP;
+- HSTS;
+- rate limiting;
+- brute-force protection;
+- Turnstile;
+- WAF;
+- headers de segurança;
+- expiração;
+- revogação;
+- logs;
+- auditoria.
+
+Nenhum arquivo privado deve ficar público simplesmente porque alguém conhece uma URL do Drive.
+
+O acesso ao arquivo deve depender da autorização da aplicação.
+
+Não utilizar permissões “anyone with the link” no Drive como mecanismo principal de segurança.
+
+======================================================================
+20. ADMINISTRATIVO — SEGURANÇA EXTRA
+======================================================================
+
+A área administrativa merece proteção superior.
+
+Implementar:
+
+- autenticação forte;
+- MFA;
+- proteção contra brute force;
+- sessões curtas/renováveis adequadamente;
+- auditoria;
+- alertas quando fizer sentido;
+- proteção adicional Cloudflare quando apropriada.
+
+Descobrir /admin NÃO significa obter acesso.
+
+======================================================================
+21. AUDITORIA
+======================================================================
+
+Registrar eventos relevantes.
+
+Exemplos:
+
+- login administrativo;
+- login do cliente;
+- falha de login;
+- projeto criado;
+- projeto alterado;
+- arquivo enviado;
+- arquivo processado;
+- processamento falhou;
+- reprocessamento;
+- acesso criado;
+- acesso revogado;
+- arquivo visualizado;
+- arquivo baixado;
+- embed utilizado;
+- alterações administrativas.
+
+Os logs devem ser úteis e pesquisáveis.
+
+======================================================================
+22. B2B2C
+======================================================================
+
+O modelo comercial poderá ser:
+
+PJJ → EMPRESA → CLIENTE FINAL
+
+Exemplo:
+
+PJJ
+↓
+Sequóia Urbanismo
+↓
+Comprador de lote
+
+A empresa poderá querer disponibilizar a evolução de um empreendimento diretamente no próprio site.
+
+A plataforma deverá permitir isso profissionalmente.
+
+======================================================================
+23. EMBED SEGURO
+======================================================================
+
+Criar sistema de embed.
+
+Exemplo:
+
+site da Sequóia:
+“Acompanhe a evolução do Recanto da Serra II”
+
+e o visualizador da PJJ aparece integrado.
+
+NÃO liberar iframe para qualquer domínio.
+
+Cada integração deverá possuir:
+
+- projeto;
+- domínio permitido;
+- produtos permitidos;
+- token;
+- expiração;
+- permissões;
+- branding;
+- status;
+- logs.
+
+Implementar proteção adequada, inclusive CSP/frame-ancestors quando aplicável.
+
+======================================================================
+24. WHITE-LABEL
+======================================================================
+
+Permitir níveis de branding.
+
+Exemplo:
+
+MODO PJJ:
+“Powered by PJJ Produções”
+
+MODO CLIENTE:
+logo da empresa contratante + PJJ discreta.
+
+MODO WHITE-LABEL:
+quando comercialmente autorizado, experiência visual da empresa cliente.
+
+Configurações podem incluir:
+
+- logo;
+- nome;
+- cores;
+- textos;
+- domínio permitido;
+- elementos visíveis.
+
+Não comprometer a segurança por causa do white-label.
+
+======================================================================
+25. PÁGINA DE PROJETO DO CLIENTE
+======================================================================
+
+Quero uma página profissional.
+
+Exemplo:
+
+RESERVA BOA VISTA
+Acompanhamento da evolução do empreendimento
+
+CAPTAÇÕES:
+
+31 AGO
+30 SET
+31 OUT
+30 NOV
+
+Selecionando uma campanha:
+
+DATA DA CAPTAÇÃO
+ÁREA REGISTRADA
+IMAGENS PROCESSADAS
+GSD
+OUTROS DADOS
+
+Depois:
+
+VISUALIZAR
+
+[ ORTOFOTO ]
+[ MODELO 3D ]
+[ DSM ]
+[ DTM ]
+[ NUVEM DE PONTOS ]
+[ FOTOS ]
+[ VÍDEOS ]
+
+Depois:
+
+ARQUIVOS
+
+Ortofoto
+Modelo 3D
+Relatório
+Outros
+
+Downloads devem ser autorizados.
+
+Depois:
+
+EVOLUÇÃO
+
+Comparação temporal entre campanhas.
+
+======================================================================
+26. CASE INICIAL DA PJJ
+======================================================================
+
+Existe um processamento real da PJJ que poderá ser utilizado como primeiro case demonstrativo.
+
+Dados aproximados do case:
+
+- área: ~30 hectares;
+- 772 imagens;
+- 771 reconstruídas;
+- GSD médio: ~3,15 cm/pixel;
+- ortofoto;
+- DSM;
+- reconstrução/modelo.
+
+Utilizar esse case como demonstração quando os arquivos estiverem disponíveis.
+
+Não apresentar como levantamento topográfico de precisão.
+
+Apresentar como demonstração de:
+
+- registro fotogramétrico;
+- ortofoto;
+- reconstrução;
+- documentação visual aérea.
+
+======================================================================
+27. EXPERIÊNCIA MOBILE
+======================================================================
+
+O sistema precisa funcionar muito bem no celular.
+
+Não apenas “responsivo porque os cards quebram de linha”.
+
+Testar de verdade:
+
+- login;
+- portal;
+- ortofoto;
+- 3D;
+- fotos;
+- documentos;
+- downloads;
+- navegação;
+- menus;
+- comparação;
+- administração essencial.
+
+Os visualizadores precisam possuir controles adequados para touch.
+
+======================================================================
+28. PERFORMANCE
+======================================================================
+
+Arquivos podem ser enormes.
+
+Pensar profundamente em:
+
+- lazy loading;
+- streaming;
+- range requests quando aplicável;
+- cache;
+- CDN;
+- thumbnails;
+- previews;
+- compressão;
+- processamento assíncrono;
+- paginação;
+- chunks;
+- derivados otimizados.
+
+Não sacrificar segurança para ganhar performance.
+
+======================================================================
+29. ACESSIBILIDADE
+======================================================================
+
+Implementar boas práticas reais:
+
+- navegação por teclado;
+- foco;
+- contraste;
+- labels;
+- aria quando necessário;
+- semântica;
+- feedback;
+- mensagens de erro;
+- estados de loading.
+
+======================================================================
+30. ERROS E ESTADOS
+======================================================================
+
+Não quero telas quebradas ou loaders infinitos.
+
+Toda operação assíncrona deverá possuir estados apropriados:
+
+- idle;
+- uploading;
+- processing;
+- success;
+- warning;
+- failure;
+- retry.
+
+Mensagens precisam explicar o problema.
+
+Não mostrar stack trace para cliente.
+
+Administrativo pode ter detalhes técnicos adicionais.
+
+======================================================================
+31. EXCLUSÃO E RECUPERAÇÃO
+======================================================================
+
+Evitar exclusão acidental.
+
+Implementar quando adequado:
+
+ATIVO
+↓
+ARQUIVADO
+↓
+LIXEIRA
+↓
+EXCLUSÃO DEFINITIVA
+
+Ações destrutivas importantes precisam de proteção.
+
+Arquivos no Drive também precisam acompanhar corretamente o ciclo de vida.
+
+======================================================================
+32. BANCO DE DADOS
+======================================================================
+
+Utilizar D1 ou solução Cloudflare apropriada para metadados estruturados.
+
+Modelar corretamente:
+
+- users;
+- clients;
+- contacts;
+- projects;
+- captures;
+- assets;
+- asset_variants;
+- processing_jobs;
+- access_grants;
+- sessions;
+- embeds;
+- domains;
+- audit_logs;
+- branding;
+- permissions;
+- demais tabelas necessárias.
+
+Não colocar tudo em uma tabela JSON gigante por preguiça.
+
+Criar:
+
+- constraints;
+- foreign keys;
+- indexes;
+- migrations;
+- versionamento.
+
+======================================================================
+33. GOOGLE DRIVE E BANCO
+======================================================================
+
+O banco deverá conhecer o vínculo entre cada asset e seu arquivo no Google Drive.
+
+Exemplo conceitual:
+
+asset
+- id
+- project_id
+- capture_id
+- type
+- original_drive_file_id
+- mime
+- size
+- checksum
+- status
+
+asset_variant
+- id
+- asset_id
+- variant_type
+- drive_file_id
+- format
+- size
+- metadata
+- status
+
+Não depender de nomes de arquivo como identidade do sistema.
+
+Utilizar IDs.
+
+======================================================================
+34. ARQUITETURA DE PASTAS NO DRIVE
+======================================================================
+
+Organizar profissionalmente os arquivos da PJJ no Google Drive.
+
+Algo conceitualmente semelhante a:
+
+PJJ Portal/
+    Clientes/
+        <client-id>/
+            Projetos/
+                <project-id>/
+                    Captacoes/
+                        <capture-id>/
+                            Original/
+                            Processados/
+                            Previews/
+                            Documentos/
+
+Mas antes de alterar a organização atual:
+
+INSPECIONE COMO O DRIVE JÁ ESTÁ INTEGRADO.
+
+Não quebre o que já funciona.
+
+Se a arquitetura existente puder ser migrada com segurança, faça a migração adequadamente.
+
+IDs do banco são a referência principal.
+
+======================================================================
+35. NÃO QUEBRAR PRODUÇÃO
+======================================================================
+
+O projeto anterior sofreu regressões.
+
+Isso NÃO pode se repetir.
+
+Antes de alterar:
+
+1. inspecione;
+2. inventarie;
+3. identifique recursos;
+4. identifique bindings;
+5. identifique banco;
+6. identifique integração Drive;
+7. identifique domínio;
+8. identifique Worker;
+9. identifique código existente;
+10. preserve o que for útil.
+
+Não apague recursos antigos imediatamente.
+
+Primeiro determine dependências.
+
+======================================================================
+36. STAGING
+======================================================================
+
+Criar/separar ambiente de desenvolvimento/staging quando necessário.
+
+Fluxo esperado:
+
+DESENVOLVIMENTO
+↓
+TESTES
+↓
+STAGING
+↓
+VALIDAÇÃO
+↓
+PRODUÇÃO
+
+Não utilizar produção como bancada de testes.
+
+======================================================================
+37. BACKUP E RECUPERAÇÃO
+======================================================================
+
+Criar estratégia real de recuperação.
+
+Considerar:
+
+- backup do banco;
+- migrations;
+- histórico/versionamento;
+- recuperação de arquivos;
+- proteção contra exclusão;
+- logs;
+- configuração da infraestrutura.
+
+Google Drive é o armazenamento principal, mas isso não elimina a necessidade de estratégia de recuperação.
+
+======================================================================
+38. MONITORAMENTO
+======================================================================
+
+Implementar observabilidade suficiente para diagnosticar problemas.
+
+Quero saber quando:
+
+- upload falha;
+- processamento falha;
+- Drive falha;
+- Worker falha;
+- Container falha;
+- viewer falha;
+- autenticação apresenta comportamento anormal.
+
+Logs precisam ser úteis.
+
+======================================================================
+39. CRITÉRIO DE “PRONTO”
+======================================================================
+
+ESTA É UMA DAS REGRAS MAIS IMPORTANTES.
+
+Não considere uma funcionalidade pronta porque existe um botão ou uma tela.
+
+Exemplo:
+
+“UPLOAD DE ORTOFOTO PRONTO”
+
+significa:
+
+upload
+→ progresso
+→ Drive
+→ banco
+→ validação
+→ job
+→ processamento
+→ derivados
+→ metadata
+→ publicação
+→ viewer
+→ autorização
+→ download
+→ exclusão
+→ auditoria
+→ tratamento de erro
+→ retry
+→ teste
+
+Só então está pronto.
+
+“PORTAL DO CLIENTE PRONTO”
+
+significa:
+
+autenticação
+→ sessão
+→ autorização
+→ projeto
+→ campanhas
+→ visualizadores
+→ arquivos
+→ download
+→ mobile
+→ expiração
+→ revogação
+→ logs
+→ erros
+→ testes
+
+“EMBED PRONTO”
+
+significa:
+
+token
+→ projeto correto
+→ domínio permitido
+→ autorização
+→ CSP
+→ branding
+→ expiração
+→ tentativa indevida bloqueada
+→ logs
+→ mobile
+→ teste real em domínio autorizado.
+
+Não aceite implementação superficial.
+
+======================================================================
+40. TESTES
+======================================================================
+
+Criar testes adequados.
+
+Incluir quando aplicável:
+
+- unitários;
+- integração;
+- API;
+- autenticação;
+- autorização;
+- upload;
+- processamento;
+- Drive;
+- viewer;
+- downloads;
+- embeds;
+- permissões;
+- regressão;
+- mobile;
+- segurança.
+
+Teste também caminhos de falha.
+
+======================================================================
+41. SEGURANÇA — TESTES NEGATIVOS
+======================================================================
+
+Tente quebrar a própria aplicação.
+
+Exemplos:
+
+Cliente A tentando acessar projeto do Cliente B.
+
+Token expirado.
+
+Token revogado.
+
+Download sem sessão.
+
+ID modificado manualmente.
+
+Embed em domínio não autorizado.
+
+Brute force.
+
+Upload com MIME falso.
+
+Path traversal.
+
+XSS em nome de projeto.
+
+CSRF.
+
+Arquivo malformado.
+
+Solicitação repetida.
+
+Sessão roubada/reutilizada quando houver mitigação aplicável.
+
+Corrija os problemas encontrados.
+
+======================================================================
+42. DESIGN
+======================================================================
+
+Quero design de nível profissional.
+
+Não quero:
+
+- cards aleatórios;
+- gradiente genérico;
+- excesso de glassmorphism;
+- dashboard com aparência de template gratuito;
+- animações inúteis;
+- interface cheia de informação sem hierarquia.
+
+Quero:
+
+- hierarquia;
+- clareza;
+- consistência;
+- confiança;
+- sofisticação;
+- boa tipografia;
+- espaço;
+- microinterações úteis;
+- excelente experiência em desktop e mobile.
+
+Preservar logo e essência PJJ.
+
+======================================================================
+43. EXPERIÊNCIA DE QUEM COMPRA
+======================================================================
+
+Pense sempre na jornada completa.
+
+A empresa recebe proposta da PJJ.
+
+Contrata.
+
+A PJJ realiza captação.
+
+O projeto é processado.
+
+Eu entro no admin.
+
+Crio/seleciono cliente.
+
+Crio/seleciono projeto.
+
+Crio nova captação.
+
+Envio arquivos.
+
+A plataforma processa.
+
+Eu reviso.
+
+Publico.
+
+Cliente recebe acesso.
+
+Cliente entra.
+
+Visualiza ortofoto.
+
+Navega no 3D.
+
+Visualiza fotos.
+
+Baixa relatório.
+
+Compara campanhas.
+
+Empresa pode incorporar determinada visualização no próprio site.
+
+Tudo deve parecer parte do MESMO produto.
+
+======================================================================
+44. EXPERIÊNCIA DE QUEM ADMINISTRA
+======================================================================
+
+Também não quero transformar cada publicação em um trabalho de desenvolvedor.
+
+Eu NÃO devo precisar:
+
+- editar HTML;
+- criar JSON manual;
+- executar SQL;
+- editar Worker;
+- renomear arquivo segundo regra secreta;
+- converter COG manualmente;
+- criar tiles;
+- preparar Potree;
+- editar código para cadastrar cliente.
+
+Tudo isso deverá ser administrável pela interface.
+
+======================================================================
+45. AUTOMATIZAÇÃO INTELIGENTE
+======================================================================
+
+Ao enviar um arquivo, detectar automaticamente quando possível.
+
+Exemplo:
+
+orthophoto.tif
+
+→ GeoTIFF detectado
+→ metadata extraída
+→ CRS detectado
+→ bounds detectados
+→ resolução detectada
+→ classificado como ortofoto
+→ processamento iniciado.
+
+model.glb
+
+→ modelo detectado
+→ validado
+→ metadata
+→ otimização
+→ thumbnail
+→ viewer.
+
+pointcloud.laz
+
+→ LAZ detectado
+→ metadata
+→ conversão
+→ viewer.
+
+report.pdf
+
+→ documento detectado
+→ thumbnail
+→ viewer PDF.
+
+JPGs
+
+→ fotografias
+→ thumbnails
+→ galeria.
+
+Permitir correção manual quando a detecção automática estiver errada.
+
+======================================================================
+46. REVISÃO ANTES DE PUBLICAR
+======================================================================
+
+Não publicar automaticamente para o cliente assim que o processamento terminar.
+
+Fluxo:
+
+PROCESSADO
+↓
+PRONTO PARA REVISÃO
+↓
+EU CONFIRMO
+↓
+PUBLICADO
+
+Isso evita expor produto errado.
+
+======================================================================
+47. STATUS DO PROJETO
+======================================================================
+
+Estados claros.
+
+Exemplos:
+
+RASCUNHO
+PROCESSANDO
+REVISÃO
+PUBLICADO
+ARQUIVADO
+
+Captações também possuem status.
+
+Assets também possuem status.
+
+======================================================================
+48. VERSIONAMENTO
+======================================================================
+
+Quando um arquivo for substituído, não destruir imediatamente a versão anterior.
+
+Manter versionamento quando adequado.
+
+Permitir rollback em situações importantes.
+
+======================================================================
+49. CUSTOS
+======================================================================
+
+A arquitetura deve ser profissional, mas também economicamente racional.
+
+Não ativar serviços caros sem necessidade.
+
+Se houver duas soluções igualmente boas e uma for muito mais barata, escolha a racional.
+
+Se alguma funcionalidade exigir aumento relevante de custo, só então me consulte.
+
+======================================================================
+50. NÃO INVENTAR CAPACIDADE
+======================================================================
+
+Se determinado recurso não consegue executar determinada operação:
+
+NÃO FINJA.
+
+Pesquise alternativa real.
+
+Exemplo:
+
+Se Worker não consegue processar adequadamente um GeoTIFF gigantesco:
+
+não faça uma tela dizendo “processando”.
+
+Utilize Container ou outra arquitetura apropriada.
+
+Se determinada integração tiver limite:
+
+trate o limite.
+
+A aplicação precisa refletir o que realmente acontece.
+
+======================================================================
+51. DOCUMENTAÇÃO
+======================================================================
+
+Documente o projeto.
+
+Quero documentação suficiente para entender:
+
+- arquitetura;
+- componentes;
+- banco;
+- Drive;
+- processamento;
+- segurança;
+- deploy;
+- recuperação;
+- variáveis;
+- bindings;
+- estrutura.
+
+Não coloque segredos na documentação.
+
+======================================================================
+52. PRIMEIRA TAREFA AO RECEBER ESTE BRIEFING
+======================================================================
+
+NÃO comece criando homepage.
+
+NÃO comece redesenhando botão.
+
+NÃO comece apagando código antigo.
+
+Primeiro:
+
+AUDITE COMPLETAMENTE O AMBIENTE ATUAL.
+
+Inspecione:
+
+- Worker(s);
+- domínio(s);
+- routes;
+- D1;
+- bindings;
+- integração atual com Google Drive;
+- estrutura atual de arquivos;
+- autenticação existente;
+- recursos Cloudflare existentes;
+- código/repositório disponível;
+- variáveis/secrets sem expô-los;
+- infraestrutura antiga;
+- dependências;
+- funcionalidades que ainda funcionam;
+- funcionalidades quebradas;
+- recursos que podem ser reutilizados.
+
+Depois estabeleça internamente um plano de migração.
+
+Preserve o que presta.
+
+Remova posteriormente o que ficou obsoleto.
+
+======================================================================
+53. ORDEM DE IMPLEMENTAÇÃO
+======================================================================
+
+A ordem geral deverá privilegiar FUNDAMENTO antes de aparência.
+
+Algo próximo de:
+
+1. auditoria;
+2. backup/snapshot;
+3. arquitetura;
+4. modelo de dados;
+5. integração Drive;
+6. autenticação;
+7. autorização;
+8. segurança;
+9. upload;
+10. processamento;
+11. pipeline de assets;
+12. ortofoto;
+13. 3D;
+14. nuvem de pontos;
+15. DSM/DTM;
+16. fotos/vídeos/documentos;
+17. admin;
+18. portal;
+19. comparação temporal;
+20. B2B2C/embed;
+21. institucional;
+22. design refinado;
+23. testes completos;
+24. segurança;
+25. performance;
+26. staging;
+27. produção;
+28. auditoria final.
+
+Essa ordem pode ser ajustada tecnicamente se houver motivo real.
+
+======================================================================
+54. AUTONOMIA DURANTE A EXECUÇÃO
+======================================================================
+
+Este projeto NÃO deve virar uma sessão interminável em que você me manda fazer cada passo.
+
+Você tem autorização para:
+
+- pesquisar;
+- inspecionar;
+- criar código;
+- corrigir código;
+- criar migrations;
+- alterar schemas;
+- implementar componentes;
+- configurar recursos;
+- testar;
+- depurar;
+- refatorar;
+- remover código comprovadamente obsoleto quando seguro;
+- criar infraestrutura necessária;
+- corrigir problemas encontrados;
+- tomar decisões técnicas razoáveis.
+
+Use staging e backups para evitar danos.
+
+Quando encontrar um problema:
+
+INVESTIGUE → CORRIJA → TESTE → CONTINUE.
+
+Não:
+
+ENCONTRE → ME PERGUNTE O QUE FAZER.
+
+======================================================================
+55. REGRA CONTRA SUPERFICIALIDADE
+======================================================================
+
+Este projeto já sofreu anteriormente com implementações em que muitas funcionalidades pareciam existir, mas eram apenas superficiais.
+
+Isso NÃO é aceitável.
+
+Prefiro:
+
+5 funcionalidades realmente completas
+
+do que:
+
+50 funcionalidades que só possuem interface.
+
+Entretanto, o objetivo final continua sendo entregar TODA a plataforma descrita neste briefing.
+
+Não reduza silenciosamente o escopo.
+
+Não transforme requisito complexo em versão simplificada sem justificativa.
+
+Não marque TODO como concluído.
+
+Não deixe mock como produção.
+
+Não use dados falsos em produção.
+
+Não esconda funcionalidade quebrada atrás de interface bonita.
+
+======================================================================
+56. RESULTADO FINAL ESPERADO
+======================================================================
+
+Ao final, quero possuir uma plataforma PJJ Produções em que:
+
+- o site institucional esteja profissional;
+- minha identidade esteja preservada;
+- eu tenha administrativo seguro;
+- eu consiga criar clientes;
+- eu consiga criar projetos;
+- eu consiga criar captações;
+- eu consiga enviar arquivos manualmente;
+- os arquivos sejam armazenados no Google Drive da PJJ;
+- a plataforma processe automaticamente os produtos;
+- GeoTIFF vire visualização web funcional;
+- ortofoto seja navegável;
+- DSM/DTM sejam visualizáveis;
+- modelos 3D sejam interativos;
+- nuvens de pontos sejam interativas;
+- fotos tenham galeria;
+- vídeos tenham player;
+- PDFs tenham viewer;
+- downloads sejam seguros;
+- cliente tenha portal privado;
+- acessos expirem e possam ser revogados;
+- exista auditoria;
+- campanhas possam ser comparadas;
+- exista acompanhamento temporal;
+- empresas possam incorporar visualizadores em seus sites;
+- exista controle por domínio;
+- exista possibilidade de white-label;
+- tudo funcione no celular;
+- segurança seja real;
+- processamento seja real;
+- erros sejam tratados;
+- produção seja separada de desenvolvimento;
+- a plataforma seja documentada;
+- não exista mais dependência do meu computador.
+
+======================================================================
+57. PRINCÍPIO FINAL
+======================================================================
+
+Não trate isto como “fazer um site”.
+
+Trate como construir o PRODUTO DIGITAL da PJJ Produções.
+
+A plataforma será parte do próprio serviço que estou vendendo.
+
+Quando uma construtora contratar acompanhamento de obra, ela não estará recebendo apenas:
+
+“um TIFF e um GLB”.
+
+Ela deverá receber uma experiência:
+
+PJJ realiza a captação
+→ dados são processados
+→ produtos entram na plataforma
+→ cliente recebe acesso
+→ visualiza o empreendimento
+→ navega pela ortofoto
+→ explora o modelo 3D
+→ consulta campanhas anteriores
+→ compara evolução
+→ baixa os produtos autorizados
+→ pode disponibilizar determinadas visualizações aos próprios clientes.
+
+Esse é o nível do produto.
+
+COMECE PELA AUDITORIA COMPLETA DO AMBIENTE EXISTENTE.
+
+NÃO ME PEÇA PARA REPETIR AS DECISÕES CONTIDAS NESTE BRIEFING.
+
+NÃO ME PEÇA CONFIRMAÇÃO PARA CADA ETAPA.
+
+TRABALHE AUTONOMAMENTE E SÓ ME INTERROMPA QUANDO EXISTIR UM BLOQUEIO REAL QUE DEPENDA DE MIM.
