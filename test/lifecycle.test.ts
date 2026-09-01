@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../src/audit',()=>({audit:vi.fn(async()=>{})}));
-import { publishEntity, unpublishAsset } from '../src/lifecycle';
+import { publishEntity, rollbackAsset, unpublishAsset } from '../src/lifecycle';
 
 describe('publication workflow',()=>{
   beforeEach(()=>vi.clearAllMocks());
@@ -40,5 +40,14 @@ describe('publication workflow',()=>{
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({id:'asset-1',status:'review'});
     expect(batched.map(x=>x.sql).some(sql=>sql.includes("UPDATE assets SET status='review'"))).toBe(true);
+  });
+
+  it('rolls a retained version back and withdraws its replacement',async()=>{
+    const batched:Array<{sql:string;args:unknown[]}>=[];
+    const db={prepare(sql:string){const statement={sql,args:[] as unknown[],bind(...args:unknown[]){statement.args=args;return statement},async first(){return sql.startsWith('SELECT id,project_id')?{id:'asset-1',project_id:'project-1',capture_id:'capture-1',status:'review',version:1}:null},async all(){return sql.includes('replaces_asset_id')?{results:[{id:'asset-2'}]}:{results:[]}}};return statement},async batch(items:Array<{sql:string;args:unknown[]}>){batched.push(...items);return []}};
+    const response=await rollbackAsset({DB:db} as never,{role:'owner',userId:'owner-1'} as never,'asset-1','request-1');
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({id:'asset-1',status:'published',replacedAssetIds:['asset-2']});
+    expect(batched.map(x=>x.sql)).toEqual(expect.arrayContaining([expect.stringContaining("UPDATE assets SET status='published'"),expect.stringContaining("WHERE id=?1 AND status='published'")]));
   });
 });

@@ -7,6 +7,7 @@ import { trashDriveFile } from './drive';
 export async function listAssets(env:Env,url:URL):Promise<Response>{
   const projectId=url.searchParams.get('projectId'),captureId=url.searchParams.get('captureId');
   const rows=await env.DB.prepare(`SELECT a.id,a.project_id,a.capture_id,a.type,a.title,a.original_name,a.mime_type,a.size_bytes,a.version,a.replaces_asset_id,a.status,a.error_code,a.error_message,a.created_at,
+    EXISTS(SELECT 1 FROM assets newer WHERE newer.replaces_asset_id=a.id AND newer.status!='trashed') has_replacement,
     j.id job_id,j.status job_status,j.progress job_progress,j.error_message job_error
     FROM assets a LEFT JOIN processing_jobs j ON j.id=(SELECT id FROM processing_jobs WHERE asset_id=a.id ORDER BY queued_at DESC LIMIT 1)
     WHERE a.status!='trashed' AND (?1 IS NULL OR a.project_id=?1) AND (?2 IS NULL OR a.capture_id=?2) ORDER BY a.created_at DESC LIMIT 200`)
@@ -42,6 +43,25 @@ export async function unpublishAsset(env:Env,actor:Principal,id:string,rid:strin
   await env.DB.batch(statements);
   await audit(env,{requestId:rid,actorType:'admin',actorId:actor.userId,action:'asset.unpublished',targetType:'asset',targetId:id,metadata:{projectId:asset.project_id,captureId:asset.capture_id}});
   return json({id,status:'review',projectId:asset.project_id,captureId:asset.capture_id});
+}
+
+/** Restores a retained asset version and removes its direct replacement from delivery. */
+export async function rollbackAsset(env:Env,actor:Principal,id:string,rid:string):Promise<Response>{
+  const asset=await env.DB.prepare(`SELECT id,project_id,capture_id,status,version FROM assets
+    WHERE id=?1 AND status NOT IN ('trashed','uploading','received','validating','processing','failed')`).bind(id)
+    .first<{id:string;project_id:string;capture_id:string|null;status:string;version:number}>();
+  if(!asset)return error(409,'asset_not_rollbackable','Esta versão não está disponível para restauração.',rid);
+  const replacements=await env.DB.prepare(`SELECT id FROM assets WHERE replaces_asset_id=?1 AND status!='trashed'`).bind(id).all<{id:string}>();
+  if(!replacements.results.length)return error(409,'no_replacement','Não existe uma versão posterior para substituir.',rid);
+  const statements=[
+    env.DB.prepare("UPDATE assets SET status='published',published_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=?1").bind(id),
+    env.DB.prepare("UPDATE projects SET status='published',published_at=COALESCE(published_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP WHERE id=?1").bind(asset.project_id)
+  ];
+  if(asset.capture_id)statements.push(env.DB.prepare("UPDATE captures SET status='published',published_at=COALESCE(published_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP WHERE id=?1").bind(asset.capture_id));
+  for(const replacement of replacements.results)statements.push(env.DB.prepare("UPDATE assets SET status='review',published_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?1 AND status='published'").bind(replacement.id));
+  await env.DB.batch(statements);
+  await audit(env,{requestId:rid,actorType:'admin',actorId:actor.userId,action:'asset.rolled_back',targetType:'asset',targetId:id,metadata:{version:asset.version,replacedAssetIds:replacements.results.map(x=>x.id)}});
+  return json({id,status:'published',version:asset.version,replacedAssetIds:replacements.results.map(x=>x.id)});
 }
 
 export async function retryJob(env:Env,actor:Principal,jobId:string,rid:string):Promise<Response>{
