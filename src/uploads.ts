@@ -16,6 +16,7 @@ interface StartUpload {
   fileName: string;
   mimeType?: string;
   sizeBytes: number;
+  replacesAssetId?: string;
 }
 
 export async function startUpload(request: Request, env: Env, actor: Principal, rid: string): Promise<Response> {
@@ -33,6 +34,13 @@ export async function startUpload(request: Request, env: Env, actor: Principal, 
        AND (?2 IN ('owner','admin') OR EXISTS(SELECT 1 FROM project_members m WHERE m.project_id=p.id AND m.user_id=?3 AND m.permission='manage'))`
   ).bind(input.projectId, actor.role, actor.userId).first<{ id: string; drive_folder_id: string | null }>();
   if (!project) return error(404, 'project_not_found', 'Projeto não encontrado.', rid);
+  let version=1,replacesAssetId:string|null=null;
+  if(input.replacesAssetId){
+    const replaced=await env.DB.prepare(`SELECT id,version FROM assets WHERE id=?1 AND project_id=?2 AND status!='trashed'`)
+      .bind(input.replacesAssetId,input.projectId).first<{id:string;version:number}>();
+    if(!replaced)return error(400,'invalid_replacement','A versão anterior não pertence a este projeto.',rid);
+    replacesAssetId=replaced.id;version=replaced.version+1;
+  }
   let destinationFolder = project.drive_folder_id || env.DRIVE_ROOT_FOLDER_ID;
   if (input.captureId) {
     const capture = await env.DB.prepare("SELECT id,drive_folder_id FROM captures WHERE id=?1 AND project_id=?2 AND status!='trashed'").bind(input.captureId, input.projectId).first<{id:string;drive_folder_id:string}>();
@@ -78,15 +86,15 @@ export async function startUpload(request: Request, env: Env, actor: Principal, 
   const encryptedUrl = await encrypt(sessionUrl, env.DATA_ENCRYPTION_KEY);
   await env.DB.batch([
     env.DB.prepare(
-      `INSERT INTO assets(id,project_id,capture_id,type,title,original_name,mime_type,size_bytes,status)
-       VALUES(?1,?2,?3,?4,?5,?6,?7,?8,'uploading')`
-    ).bind(assetId, input.projectId, input.captureId ?? null, input.type, input.title?.trim() || name, name, mime, input.sizeBytes),
+      `INSERT INTO assets(id,project_id,capture_id,type,title,original_name,mime_type,size_bytes,version,replaces_asset_id,status)
+       VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,'uploading')`
+    ).bind(assetId, input.projectId, input.captureId ?? null, input.type, input.title?.trim() || name, name, mime, input.sizeBytes, version, replacesAssetId),
     env.DB.prepare(
       `INSERT INTO upload_sessions(id,asset_id,drive_session_url_ciphertext,total_bytes,chunk_size_bytes,expires_at)
        VALUES(?1,?2,?3,?4,?5,datetime('now','+23 hours'))`
     ).bind(uploadId, assetId, encryptedUrl, input.sizeBytes, CHUNK_SIZE)
   ]);
-  await audit(env, { requestId: rid, actorType: 'admin', actorId: actor.userId, action: 'upload.started', targetType: 'asset', targetId: assetId, metadata: { sizeBytes: input.sizeBytes, type: input.type } });
+  await audit(env, { requestId: rid, actorType: 'admin', actorId: actor.userId, action: 'upload.started', targetType: 'asset', targetId: assetId, metadata: { sizeBytes: input.sizeBytes, type: input.type, version, replacesAssetId } });
   return json({ uploadId, assetId, chunkSize: CHUNK_SIZE, receivedBytes: 0, expiresInSeconds: 82_800 }, 201);
 }
 
