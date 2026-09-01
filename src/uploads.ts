@@ -40,6 +40,23 @@ export async function startUpload(request: Request, env: Env, actor: Principal, 
     try { destinationFolder = await ensureFolder(env, { parentId:capture.drive_folder_id, entityType:'original', entityId:capture.id, name:'Original' }); }
     catch { return error(502, 'drive_unavailable', 'O Drive não localizou a pasta da captação.', rid); }
   }
+  // A refresh, browser crash or temporary loss of connection must not create a
+  // second asset.  The resumable Drive session is still valid for 23 hours, so
+  // hand the same session back to the authenticated operator.
+  const resumable = await env.DB.prepare(
+    `SELECT u.id upload_id,u.asset_id,u.received_bytes,u.chunk_size_bytes,u.total_bytes
+       FROM upload_sessions u JOIN assets a ON a.id=u.asset_id
+      WHERE a.project_id=?1 AND a.capture_id IS ?2 AND a.original_name=?3
+        AND a.size_bytes=?4 AND a.status='uploading' AND u.status='active'
+        AND u.expires_at>CURRENT_TIMESTAMP
+      ORDER BY u.updated_at DESC LIMIT 1`
+  ).bind(input.projectId, input.captureId ?? null, name, input.sizeBytes).first<{
+    upload_id:string;asset_id:string;received_bytes:number;chunk_size_bytes:number;total_bytes:number;
+  }>();
+  if(resumable){
+    await audit(env,{requestId:rid,actorType:'admin',actorId:actor.userId,action:'upload.resumed',targetType:'asset',targetId:resumable.asset_id,metadata:{receivedBytes:resumable.received_bytes}});
+    return json({uploadId:resumable.upload_id,assetId:resumable.asset_id,chunkSize:resumable.chunk_size_bytes,receivedBytes:resumable.received_bytes,totalBytes:resumable.total_bytes,resumed:true,expiresInSeconds:82_800});
+  }
   const duplicate = await env.DB.prepare(
     `SELECT id FROM assets WHERE project_id=?1 AND capture_id IS ?2 AND original_name=?3
        AND size_bytes=?4 AND status NOT IN ('trashed','failed') LIMIT 1`
