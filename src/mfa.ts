@@ -4,6 +4,7 @@ import { createSession } from './auth';
 import { decrypt, encrypt, randomToken, sha256Hex } from './crypto';
 import { error, json, readJson, sessionCookie } from './http';
 import { createTotpSecret, otpauthUri, verifyTotp } from './totp';
+import { hashPassword } from './password';
 
 export async function createMfaChallenge(env: Env, userId: string): Promise<string> {
   const token = randomToken();
@@ -71,4 +72,47 @@ export async function verifyMfaLogin(request: Request, env: Env, rid: string): P
   const session = await createSession(env, row.user_id, request);
   return json({ user:{id:row.user_id,email:row.email,displayName:row.display_name,role:row.role},csrfToken:session.csrf }, 200,
     {'set-cookie':sessionCookie(session.token,session.maxAge)});
+}
+
+export async function recoverAdminPassword(request:Request,env:Env,rid:string):Promise<Response>{
+  let input:{email:string;code:string;newPassword:string};
+  try{input=await readJson(request)}catch{return error(400,'invalid_json','Dados inválidos.',rid)}
+  const email=input.email?.trim().toLowerCase(),code=input.code?.trim();
+  if(!email||email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!code){
+    return error(400,'invalid_recovery','Informe e-mail, código de segurança e a nova senha.',rid);
+  }
+  let passwordHash:string;
+  try{passwordHash=await hashPassword(input.newPassword)}catch{return error(400,'weak_password','Use uma senha com pelo menos 12 caracteres.',rid)}
+  const ip=await sha256Hex(request.headers.get('cf-connecting-ip')||'unknown'),key=`password-recovery:${ip}:${email}`;
+  const rate=await env.DB.prepare('SELECT attempts,blocked_until FROM rate_limits WHERE key=?1').bind(key).first<{attempts:number;blocked_until:string|null}>();
+  if(rate?.blocked_until&&new Date(rate.blocked_until).getTime()>Date.now())return error(429,'temporarily_blocked','Muitas tentativas. Aguarde antes de tentar novamente.',rid);
+  const user=await env.DB.prepare(`SELECT id,mfa_secret_ciphertext FROM users WHERE email=?1 AND role IN ('owner','admin') AND status='active' AND mfa_enabled=1 LIMIT 1`)
+    .bind(email).first<{id:string;mfa_secret_ciphertext:string|null}>();
+  let accepted=false,recoveryId:string|null=null;
+  if(user?.mfa_secret_ciphertext){
+    try{accepted=await verifyTotp(await decrypt(user.mfa_secret_ciphertext,env.DATA_ENCRYPTION_KEY),code)}catch{accepted=false}
+    if(!accepted){
+      const recovery=await env.DB.prepare('SELECT id FROM mfa_recovery_codes WHERE user_id=?1 AND code_hash=?2 AND used_at IS NULL LIMIT 1')
+        .bind(user.id,await sha256Hex(code.toUpperCase())).first<{id:string}>();
+      if(recovery){accepted=true;recoveryId=recovery.id}
+    }
+  }
+  if(!accepted||!user){
+    await env.DB.prepare(`INSERT INTO rate_limits(key,window_started_at,attempts,blocked_until) VALUES(?1,CURRENT_TIMESTAMP,1,NULL)
+      ON CONFLICT(key) DO UPDATE SET attempts=CASE WHEN window_started_at<datetime('now','-15 minutes') THEN 1 ELSE attempts+1 END,
+      window_started_at=CASE WHEN window_started_at<datetime('now','-15 minutes') THEN CURRENT_TIMESTAMP ELSE window_started_at END,
+      blocked_until=CASE WHEN attempts>=5 THEN datetime('now','+30 minutes') ELSE blocked_until END,updated_at=CURRENT_TIMESTAMP`).bind(key).run();
+    return error(401,'invalid_recovery','Não foi possível confirmar o código de segurança.',rid);
+  }
+  const statements=[
+    env.DB.prepare('UPDATE users SET password_hash=?2,failed_login_count=0,locked_until=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?1').bind(user.id,passwordHash),
+    env.DB.prepare('UPDATE sessions SET revoked_at=CURRENT_TIMESTAMP WHERE user_id=?1 AND revoked_at IS NULL').bind(user.id),
+    env.DB.prepare('UPDATE auth_challenges SET used_at=CURRENT_TIMESTAMP WHERE user_id=?1 AND used_at IS NULL').bind(user.id),
+    env.DB.prepare('DELETE FROM rate_limits WHERE key=?1').bind(key)
+  ];
+  if(recoveryId)statements.push(env.DB.prepare('UPDATE mfa_recovery_codes SET used_at=CURRENT_TIMESTAMP WHERE id=?1').bind(recoveryId));
+  await env.DB.batch(statements);
+  await env.DB.prepare(`INSERT INTO audit_logs(request_id,actor_type,actor_id,action,target_type,target_id,outcome,ip_hash)
+    VALUES(?1,'admin',?2,'auth.password_recovered','user',?2,'success',?3)`).bind(rid,user.id,ip).run();
+  return json({reset:true});
 }

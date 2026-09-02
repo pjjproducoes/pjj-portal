@@ -6,7 +6,7 @@ import { clearSessionCookie, error, json, readJson, requestId, sessionCookie } f
 import { hashPassword, verifyPassword } from './password';
 import { cancelUpload, putChunk, startUpload, uploadStatus } from './uploads';
 import { createCapture, createClient, createProject, listCaptures, listClients, listProjects } from './admin';
-import { createMfaChallenge, enableMfa, setupMfa, verifyMfaLogin } from './mfa';
+import { createMfaChallenge, enableMfa, recoverAdminPassword, setupMfa, verifyMfaLogin } from './mfa';
 import { adminUi, institutional, invitationUi, portalUi, privacyUi } from './ui';
 import { assetContent, portalProject, portalProjects } from './portal';
 import { acceptInvitation, createPortalUser, listPortalUsers, updatePortalUser } from './users';
@@ -132,6 +132,7 @@ export default {
       if (url.pathname.startsWith('/api/internal/')) return internalRoute(request, env, rid);
       if (request.method === 'POST' && url.pathname === '/api/auth/bootstrap') return bootstrap(request, env, rid);
       if (request.method === 'POST' && url.pathname === '/api/auth/login') return login(request, env, rid);
+      if (request.method === 'POST' && url.pathname === '/api/auth/recover-password') return recoverAdminPassword(request,env,rid);
       if (request.method === 'POST' && url.pathname === '/api/auth/mfa/verify-login') return verifyMfaLogin(request, env, rid);
       if (request.method === 'POST' && url.pathname === '/api/auth/accept-invite') return acceptInvitation(request, env, rid);
       const share = route(url.pathname, /^\/share\/([A-Za-z0-9_-]{40,64})$/);

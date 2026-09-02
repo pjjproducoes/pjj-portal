@@ -6,6 +6,7 @@ import { deliveryViewer } from '../src/delivery-viewer';
 import { operationsUi } from '../src/ops-ui';
 import { portalV2 } from '../src/portal-v2';
 import { inferAssetType } from '../src/uploads';
+import { adminUi } from '../src/ui';
 
 describe('delivery product experience', () => {
   it('selects only capabilities supported by the uploaded format', () => {
@@ -90,7 +91,7 @@ describe('active administration surface', () => {
   });
 
   it('ships syntactically valid classic scripts in the operational interfaces', async () => {
-    for(const [surfaceIndex,response] of [adminV3(),portalV2(),operationsUi()].entries()){
+    for(const [surfaceIndex,response] of [adminUi(),adminV3(),portalV2(),operationsUi()].entries()){
       const body=await response.text(),scripts=[...body.matchAll(/<script(?: nonce="[^"]+")?>([\s\S]*?)<\/script>/g)].map(match=>match[1]);
       expect(scripts.length).toBeGreaterThan(0);
       for(const [scriptIndex,script] of scripts.entries())try{Function(script!)}catch(error){throw new Error(`surface ${surfaceIndex}, script ${scriptIndex}: ${String(error)}`)}
