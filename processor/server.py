@@ -15,6 +15,31 @@ def download(file_id,token,target):
     url='https://www.googleapis.com/drive/v3/files/'+urllib.parse.quote(file_id,safe='')+'?alt=media'
     with drive_request(url,token) as source,open(target,'wb') as output: shutil.copyfileobj(source,output,8*1024*1024)
 
+def drive_metadata(file_id,token,fields='id,name,parents,mimeType,size'):
+    url='https://www.googleapis.com/drive/v3/files/'+urllib.parse.quote(file_id,safe='')+'?fields='+urllib.parse.quote(fields,safe=',')
+    with drive_request(url,token) as response:return json.loads(response.read())
+
+def list_drive_children(parent_id,token):
+    q=urllib.parse.quote(f"'{parent_id}' in parents and trashed=false")
+    url='https://www.googleapis.com/drive/v3/files?q='+q+'&pageSize=1000&fields=files(id,name,mimeType,size)'
+    with drive_request(url,token) as response:return json.loads(response.read()).get('files',[])
+
+def download_model_companions(input_file_id,token,target_dir):
+    try:
+      meta=drive_metadata(input_file_id,token)
+      parents=meta.get('parents') or []
+      if not parents:return []
+      allowed={'.mtl','.jpg','.jpeg','.png','.webp','.tif','.tiff','.bmp'}
+      saved=[]
+      for item in list_drive_children(parents[0],token):
+        name=pathlib.Path(item.get('name') or '').name
+        if not name or pathlib.Path(name).suffix.lower() not in allowed:continue
+        target=pathlib.Path(target_dir)/name
+        download(item['id'],token,target);saved.append(name)
+      return saved
+    except Exception as error:
+      print(json.dumps({'warning':'model_companions_failed','detail':str(error)[:500]}));return []
+
 def upload(path,token,parent,name,mime,properties):
     size=os.path.getsize(path); metadata=json.dumps({'name':name,'parents':[parent],'mimeType':mime,'appProperties':properties}).encode()
     init=drive_request('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,size,md5Checksum',token,'POST',metadata,{
@@ -72,6 +97,7 @@ def process(job,token_provider=None,on_progress=None):
       elif kind=='model_3d':
         glb=pathlib.Path(tmp)/(original.stem+'.optimized.glb')
         source=original
+        if original.suffix.lower()=='.obj':metadata['modelCompanions']=download_model_companions(job['inputFileId'],job['accessToken'],tmp)
         if original.suffix.lower() not in ('.glb','.gltf'):
           converted=pathlib.Path(tmp)/(original.stem+'.glb');run('assimp','export',str(original),str(converted));source=converted
         run('gltf-transform','optimize',str(source),str(glb),'--compress','meshopt');outputs.append(('optimized_glb',glb,'model/gltf-binary'))

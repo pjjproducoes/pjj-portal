@@ -38,11 +38,24 @@ def execute(path):
         api(f'/api/internal/jobs/{job_id}/fail',{'error':type(error).__name__,'detail':str(error)[:2000]});raise
     print(json.dumps({'ok':True,'jobId':job_id}))
 
+def drain(path,max_jobs=20):
+    processed=0
+    current=path
+    while processed<max_jobs:
+        if processed==0:
+            if not pathlib.Path(current).exists():
+                if not prepare(current):break
+        else:
+            if not prepare(current):break
+        execute(current);processed+=1
+    print(json.dumps({'ok':True,'processed':processed}))
+
 if __name__=='__main__':
-    parser=argparse.ArgumentParser();parser.add_argument('mode',choices=['prepare','execute']);parser.add_argument('job_file');args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('mode',choices=['prepare','execute','drain']);parser.add_argument('job_file');args=parser.parse_args()
     if args.mode=='prepare':
         found=prepare(args.job_file);output=os.getenv('GITHUB_OUTPUT')
         if output:
             with pathlib.Path(output).open('a') as stream:stream.write(f'has_job={str(found).lower()}\n')
         print(json.dumps({'ok':True,'hasJob':found}))
-    else:execute(args.job_file)
+    elif args.mode=='execute':execute(args.job_file)
+    else:drain(args.job_file)

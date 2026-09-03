@@ -20,6 +20,10 @@ describe('administrative UI contract', () => {
     expect(body).toContain('/api/admin/trash');
     expect(body).toContain('/api/auth/mfa/verify-login');
     expect(body).toContain('Revisar');
+    expect(body).toContain('Aprovações');
+    expect(body).toContain('Importar pasta WebODM');
+    expect(body).toContain('id="webodmFolder"');
+    expect(body).toContain('classifyWebOdm');
     expect(body).toContain('B2B2C / embeds');
     expect(body).toContain('Lixeira operacional');
   });

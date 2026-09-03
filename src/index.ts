@@ -114,7 +114,7 @@ export default {
     try {
       if (['GET','HEAD'].includes(request.method) && url.pathname === '/') return institutional();
       if (['GET','HEAD'].includes(request.method) && (url.pathname === '/privacidade' || url.pathname === '/privacy')) return privacyUi();
-      if (['GET','HEAD'].includes(request.method) && (url.pathname === '/admin' || url.pathname === '/admin/')) return adminUi();
+      if (['GET','HEAD'].includes(request.method) && (url.pathname === '/admin' || url.pathname === '/admin/' || url.pathname === '/admin/review')) return adminUi();
       if (['GET','HEAD'].includes(request.method) && url.pathname === '/admin/operations') return operationsUi();
       if (['GET','HEAD'].includes(request.method) && (url.pathname === '/portal' || url.pathname === '/portal/')) return portalUi();
       if (['GET','HEAD'].includes(request.method) && (url.pathname === '/demonstracao' || url.pathname === '/demonstracao/')) return demoIndex(env);

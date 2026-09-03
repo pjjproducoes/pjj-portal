@@ -22,7 +22,12 @@ interface StartUpload {
 export function inferAssetType(fileName:string,mimeType:string,declared?:string):string{
   if(declared&&declared!=='auto'&&TYPES.has(declared))return declared;
   const extension=fileName.toLowerCase().split('.').pop()||'',mime=mimeType.toLowerCase();
-  if(['tif','tiff','geotiff'].includes(extension)||mime.includes('tiff'))return 'orthophoto';
+  if(['tif','tiff','geotiff'].includes(extension)||mime.includes('tiff')){
+    const lower=fileName.toLowerCase();
+    if(/(^|[_.\-])dsm([_.\-]|$)/.test(lower)||lower.includes('/dsm'))return 'dsm';
+    if(/(^|[_.\-])dtm([_.\-]|$)/.test(lower)||lower.includes('/dtm'))return 'dtm';
+    return 'orthophoto';
+  }
   if(['las','laz','copc'].includes(extension))return 'point_cloud';
   if(['glb','gltf','obj','fbx','dae','ply','stl'].includes(extension))return 'model_3d';
   if(extension==='pdf'||mime==='application/pdf')return 'pdf';

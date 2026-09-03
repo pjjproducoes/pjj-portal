@@ -1,9 +1,15 @@
 import { describe,expect,it,vi } from 'vitest';
 vi.mock('../src/audit',()=>({audit:vi.fn(async()=>{})}));
 vi.mock('../src/drive',()=>({createResumableUpload:vi.fn(),ensureFolder:vi.fn(),uploadChunk:vi.fn()}));
-import { cancelUpload,startUpload } from '../src/uploads';
+import { cancelUpload,inferAssetType,startUpload } from '../src/uploads';
 
 describe('resumable upload lifecycle',()=>{
+  it('recognizes DSM and DTM TIFFs instead of treating every GeoTIFF as orthophoto',()=>{
+    expect(inferAssetType('dsm.tif','image/tiff','auto')).toBe('dsm');
+    expect(inferAssetType('odm_dem_dtm.tif','image/tiff','auto')).toBe('dtm');
+    expect(inferAssetType('odm_orthophoto.tif','image/tiff','auto')).toBe('orthophoto');
+  });
+
   it('cancels the session and closes the related asset state',async()=>{
     const batched:Array<{sql:string;args:unknown[]}>=[];
     const db={prepare(sql:string){const s={sql,args:[] as unknown[],bind(...args:unknown[]){s.args=args;return s},async first(){return {asset_id:'asset-1'}}};return s},async batch(items:Array<{sql:string;args:unknown[]}>){batched.push(...items);return []}};
