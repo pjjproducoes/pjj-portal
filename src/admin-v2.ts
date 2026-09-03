@@ -2,9 +2,9 @@ import { logo } from './logo';
 import { randomToken } from './crypto';
 
 export function adminV2(): Response {
-  const nonce=randomToken(12);
+  const nonce = randomToken(12);
 
-  const page=`<!doctype html>
+  const page = `<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -21,23 +21,34 @@ export function adminV2(): Response {
   --muted:#716e67;
   --line:#e2ded5
 }
-*{box-sizing:border-box}
+
+*{
+  box-sizing:border-box
+}
+
+[hidden]{
+  display:none !important;
+}
+
 body{
   margin:0;
   background:var(--paper);
   color:var(--ink);
   font:15px/1.5 Inter,system-ui,sans-serif
 }
+
 .app{
   display:grid;
   grid-template-columns:260px 1fr;
   min-height:100vh
 }
+
 .nav{
   background:var(--black);
   color:#fff;
   padding:28px 18px
 }
+
 .brand{
   display:flex;
   align-items:center;
@@ -49,11 +60,13 @@ body{
   padding:0 10px 26px;
   border-bottom:1px solid #fff2
 }
+
 .brand img{
   width:42px;
   height:42px;
   border-radius:50%
 }
+
 .nav-group{
   margin:30px 0 8px 12px;
   color:#9e9a90;
@@ -61,6 +74,7 @@ body{
   font-size:10px;
   letter-spacing:.18em
 }
+
 .nav button{
   display:block;
   width:100%;
@@ -74,15 +88,18 @@ body{
   font-weight:650;
   cursor:pointer
 }
+
 .nav button.active,
 .nav button:hover{
   background:var(--gold);
   color:#fff
 }
+
 .main{
   padding:42px clamp(22px,5vw,72px);
   max-width:1500px
 }
+
 .head{
   display:flex;
   justify-content:space-between;
@@ -91,6 +108,7 @@ body{
   padding-bottom:24px;
   margin-bottom:28px
 }
+
 .eyebrow{
   color:var(--gold);
   font-size:11px;
@@ -98,18 +116,27 @@ body{
   text-transform:uppercase;
   font-weight:800
 }
+
 .h1{
   font-size:clamp(32px,4vw,48px);
   letter-spacing:-.05em;
   margin:6px 0 0
 }
-.section{display:none}
-.section.active{display:block}
+
+.section{
+  display:none
+}
+
+.section.active{
+  display:block
+}
+
 .grid{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
   gap:18px
 }
+
 .card{
   background:#fff;
   border:1px solid var(--line);
@@ -117,12 +144,17 @@ body{
   padding:22px;
   box-shadow:0 9px 28px #0000000b
 }
+
 .metric{
   font-size:34px;
   font-weight:800;
   margin-top:8px
 }
-.muted{color:var(--muted)}
+
+.muted{
+  color:var(--muted)
+}
+
 .toolbar{
   display:flex;
   justify-content:space-between;
@@ -130,6 +162,7 @@ body{
   gap:12px;
   margin:28px 0 14px
 }
+
 .btn{
   border:0;
   border-radius:10px;
@@ -141,18 +174,24 @@ body{
   text-decoration:none;
   display:inline-block
 }
+
 .btn.alt{
   background:#fff;
   color:var(--ink);
   border:1px solid var(--line)
 }
-.btn.gold{background:var(--gold)}
+
+.btn.gold{
+  background:var(--gold)
+}
+
 .list{
   background:#fff;
   border:1px solid var(--line);
   border-radius:18px;
   overflow:hidden
 }
+
 .item{
   display:grid;
   grid-template-columns:1.4fr 1fr .8fr auto;
@@ -161,7 +200,11 @@ body{
   padding:17px 20px;
   border-bottom:1px solid var(--line)
 }
-.item:last-child{border:0}
+
+.item:last-child{
+  border:0
+}
+
 .pill{
   display:inline-flex;
   width:max-content;
@@ -171,16 +214,19 @@ body{
   color:#635a48;
   font-size:12px
 }
+
 .actions{
   display:flex;
   gap:8px;
   justify-content:flex-end
 }
+
 .empty{
   padding:30px;
   text-align:center;
   color:var(--muted)
 }
+
 dialog{
   border:0;
   border-radius:18px;
@@ -188,14 +234,25 @@ dialog{
   width:min(560px,calc(100% - 28px));
   box-shadow:0 25px 80px #0004
 }
-dialog::backdrop{background:#000b}
-.form{padding:28px}
+
+dialog::backdrop{
+  background:#000b
+}
+
+.form{
+  padding:28px
+}
+
 .field{
   display:grid;
   gap:6px;
   margin:14px 0
 }
-.field label{font-weight:700}
+
+.field label{
+  font-weight:700
+}
+
 .field input,
 .field textarea,
 .field select{
@@ -205,32 +262,51 @@ dialog::backdrop{background:#000b}
   border-radius:9px;
   font:inherit
 }
-.field textarea{min-height:100px}
+
+.field textarea{
+  min-height:100px
+}
+
 .form-actions{
   display:flex;
   justify-content:flex-end;
   gap:10px;
   margin-top:22px
 }
+
 .msg{
   min-height:22px;
   color:#9c352e
 }
 
 @media(max-width:800px){
-  .app{grid-template-columns:1fr}
+  .app{
+    grid-template-columns:1fr
+  }
+
   .nav{
     position:static;
     padding:18px
   }
-  .nav-group{margin-top:18px}
+
+  .nav-group{
+    margin-top:18px
+  }
+
   .nav button{
     display:inline-block;
     width:auto;
     margin-right:4px
   }
-  .main{padding:28px 18px}
-  .item{grid-template-columns:1fr 1fr}
+
+  .main{
+    padding:28px 18px
+  }
+
+  .item{
+    grid-template-columns:1fr 1fr
+  }
+
   .item .actions{
     grid-column:1/-1;
     justify-content:flex-start
@@ -241,17 +317,21 @@ dialog::backdrop{background:#000b}
 
 <body>
 
-<div id="login"
-  style="min-height:100vh;display:grid;place-items:center;background:var(--black);padding:20px">
-
-<form id="loginForm"
+<div
+  id="login"
+  style="min-height:100vh;display:grid;place-items:center;background:var(--black);padding:20px"
+>
+<form
+  id="loginForm"
   class="form"
-  style="background:#fff;border-radius:20px;width:min(430px,100%)">
+  style="background:#fff;border-radius:20px;width:min(430px,100%)"
+>
 
-<a class="brand"
+<a
+  class="brand"
   style="background:var(--black);margin:-28px -28px 25px;padding:20px;border-radius:20px 20px 0 0"
-  href="/">
-
+  href="/"
+>
 <img src="${logo}" alt="PJJ">
 <span>PJJ PORTAL</span>
 </a>
@@ -271,19 +351,21 @@ dialog::backdrop{background:#000b}
 
 <div id="loginMsg" class="msg"></div>
 
-<button class="btn" style="width:100%">Entrar</button>
+<button class="btn" style="width:100%">
+Entrar
+</button>
 
 <button
   id="recoverOpen"
   class="btn alt"
   type="button"
-  style="width:100%;margin-top:10px">
+  style="width:100%;margin-top:10px"
+>
 Redefinir senha com MFA
 </button>
 
 </form>
 </div>
-
 
 <div id="app" class="app" hidden>
 
@@ -313,7 +395,6 @@ Redefinir senha com MFA
 
 </aside>
 
-
 <main class="main">
 
 <header class="head">
@@ -323,10 +404,11 @@ Redefinir senha com MFA
 <h1 id="title" class="h1">Visão geral</h1>
 </div>
 
-<button id="refresh" class="btn alt">Atualizar</button>
+<button id="refresh" class="btn alt">
+Atualizar
+</button>
 
 </header>
-
 
 <section id="dashboard" class="section active">
 
@@ -334,13 +416,14 @@ Redefinir senha com MFA
 
 <div class="toolbar">
 <h2>Atividade recente</h2>
-<button class="btn gold" data-open="clientDialog">Novo cliente</button>
+<button class="btn gold" data-open="clientDialog">
+Novo cliente
+</button>
 </div>
 
 <div id="recent" class="list"></div>
 
 </section>
-
 
 <section id="clients" class="section">
 
@@ -351,14 +434,15 @@ Redefinir senha com MFA
 <p class="muted">Empresas e responsáveis pelas entregas.</p>
 </div>
 
-<button class="btn gold" data-open="clientDialog">Novo cliente</button>
+<button class="btn gold" data-open="clientDialog">
+Novo cliente
+</button>
 
 </div>
 
 <div id="clientsList" class="list"></div>
 
 </section>
-
 
 <section id="projects" class="section">
 
@@ -369,14 +453,15 @@ Redefinir senha com MFA
 <p class="muted">Empreendimentos, locais e status de publicação.</p>
 </div>
 
-<button class="btn gold" data-open="projectDialog">Novo projeto</button>
+<button class="btn gold" data-open="projectDialog">
+Novo projeto
+</button>
 
 </div>
 
 <div id="projectsList" class="list"></div>
 
 </section>
-
 
 <section id="assets" class="section">
 
@@ -396,7 +481,6 @@ Abrir central operacional
 <div id="assetsList" class="list"></div>
 
 </section>
-
 
 <section id="captures" class="section">
 
@@ -418,7 +502,6 @@ Nova captação
 <div id="capturesList" class="list"></div>
 
 </section>
-
 
 <section id="sharing" class="section">
 
@@ -442,7 +525,6 @@ A gestão detalhada de convites, embeds e links seguros está na Central operaci
 </div>
 
 </section>
-
 
 <section id="audit" class="section">
 
@@ -468,7 +550,6 @@ Abrir auditoria completa
 </main>
 </div>
 
-
 <dialog id="clientDialog">
 
 <form id="clientForm" class="form">
@@ -491,8 +572,12 @@ Abrir auditoria completa
 </div>
 
 <div class="form-actions">
-<button type="button" class="btn alt" data-close>Cancelar</button>
-<button class="btn gold">Criar cliente</button>
+<button type="button" class="btn alt" data-close>
+Cancelar
+</button>
+<button class="btn gold">
+Criar cliente
+</button>
 </div>
 
 <div class="msg" data-msg></div>
@@ -500,7 +585,6 @@ Abrir auditoria completa
 </form>
 
 </dialog>
-
 
 <dialog id="projectDialog">
 
@@ -510,7 +594,11 @@ Abrir auditoria completa
 
 <div class="field">
 <label>Cliente</label>
-<select name="clientId" id="clientSelect" required></select>
+<select
+  name="clientId"
+  id="clientSelect"
+  required
+></select>
 </div>
 
 <div class="field">
@@ -529,8 +617,12 @@ Abrir auditoria completa
 </div>
 
 <div class="form-actions">
-<button type="button" class="btn alt" data-close>Cancelar</button>
-<button class="btn gold">Criar projeto</button>
+<button type="button" class="btn alt" data-close>
+Cancelar
+</button>
+<button class="btn gold">
+Criar projeto
+</button>
 </div>
 
 <div class="msg" data-msg></div>
@@ -538,7 +630,6 @@ Abrir auditoria completa
 </form>
 
 </dialog>
-
 
 <dialog id="captureDialog">
 
@@ -555,8 +646,8 @@ Nova captação
 <select
   name="projectId"
   id="captureProjectSelect"
-  required>
-</select>
+  required
+></select>
 </div>
 
 <div class="field">
@@ -564,7 +655,8 @@ Nova captação
 <input
   name="capturedAt"
   type="datetime-local"
-  required>
+  required
+>
 </div>
 
 <div class="field">
@@ -582,7 +674,8 @@ Nova captação
 <button
   type="button"
   class="btn alt"
-  data-crud-close>
+  data-crud-close
+>
 Cancelar
 </button>
 
@@ -596,7 +689,6 @@ Salvar captação
 
 </form>
 </dialog>
-
 
 <dialog id="projectEditDialog">
 
@@ -647,7 +739,8 @@ Demonstração pública
 <button
   type="button"
   class="btn alt"
-  data-crud-close>
+  data-crud-close
+>
 Cancelar
 </button>
 
@@ -662,54 +755,51 @@ Salvar alterações
 </form>
 </dialog>
 
-
 <script nonce="${nonce}">
 
-let csrf='';
-let mfaChallenge='';
+let csrf = '';
+let mfaChallenge = '';
 
-const $=s=>document.querySelector(s);
+const $ = s => document.querySelector(s);
 
-const esc=v=>
-String(v??'').replace(
-  /[&<>"']/g,
-  c=>({
-    '&':'&amp;',
-    '<':'&lt;',
-    '>':'&gt;',
-    '"':'&quot;',
-    "'":'&#39;'
-  }[c])
-);
+const esc = v =>
+  String(v ?? '').replace(
+    /[&<>"']/g,
+    c => ({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[c])
+  );
 
+async function api(p, o = {}) {
 
-async function api(p,o={}){
-
-  o.headers={
+  o.headers = {
     'content-type':'application/json',
-    ...(csrf?{'x-csrf-token':csrf}:{}),
-    ...(o.headers||{})
+    ...(csrf ? {'x-csrf-token': csrf} : {}),
+    ...(o.headers || {})
   };
 
-  const r=await fetch(p,o);
+  const r = await fetch(p, o);
 
-  const d=await r.json().catch(()=>({}));
+  const d = await r.json().catch(() => ({}));
 
-  if(!r.ok){
+  if (!r.ok) {
     throw Object.assign(
       new Error(
-        d.error?.message||
+        d.error?.message ||
         'Falha na operação'
       ),
-      {status:r.status}
+      { status:r.status }
     );
   }
 
   return d;
 }
 
-
-const labels={
+const labels = {
   dashboard:'Visão geral',
   clients:'Clientes',
   projects:'Projetos',
@@ -719,292 +809,273 @@ const labels={
   audit:'Auditoria'
 };
 
-
-function section(name){
+function section(name) {
 
   document
     .querySelectorAll('.section')
     .forEach(
-      x=>x.classList.toggle(
+      x => x.classList.toggle(
         'active',
-        x.id===name
+        x.id === name
       )
     );
 
   document
     .querySelectorAll('[data-section]')
     .forEach(
-      x=>x.classList.toggle(
+      x => x.classList.toggle(
         'active',
-        x.dataset.section===name
+        x.dataset.section === name
       )
     );
 
-  $('#title').textContent=
-    labels[name]||name;
+  $('#title').textContent =
+    labels[name] || name;
 
-  if(name==='clients')
+  if (name === 'clients')
     renderClients();
 
-  if(name==='projects')
+  if (name === 'projects')
     renderProjects();
 
-  if(name==='assets')
+  if (name === 'assets')
     renderAssets();
 
-  if(name==='captures')
+  if (name === 'captures')
     renderCaptures();
 
-  if(name==='audit')
+  if (name === 'audit')
     renderAudit();
 }
-
 
 document
   .querySelectorAll('[data-section]')
   .forEach(
-    b=>b.onclick=()=>section(
-      b.dataset.section
-    )
+    b => b.onclick = () =>
+      section(b.dataset.section)
   );
-
 
 document
   .querySelectorAll('[data-open]')
   .forEach(
-    b=>b.onclick=()=>{
-      const id=b.dataset.open;
+    b => b.onclick = () => {
 
-      if(id==='captureDialog'){
+      const id = b.dataset.open;
+
+      if (id === 'captureDialog') {
         openNewCapture();
         return;
       }
 
       document
-        .querySelector('#'+id)
+        .querySelector('#' + id)
         ?.showModal();
     }
   );
 
-
 document
   .querySelectorAll('[data-close]')
   .forEach(
-    b=>b.onclick=()=>
+    b => b.onclick = () =>
       b.closest('dialog')?.close()
   );
-
 
 document
   .querySelectorAll('[data-crud-close]')
   .forEach(
-    b=>b.onclick=()=>{
+    b => b.onclick = () => {
+
       b.closest('dialog')?.close();
 
-      const f=b.closest('form');
+      const f = b.closest('form');
 
-      if(
+      if (
         f &&
-        f.id==='captureForm'
-      ){
-        f.projectId.disabled=false;
+        f.id === 'captureForm'
+      ) {
+        f.projectId.disabled = false;
       }
     }
   );
 
+async function renderClients() {
 
-async function renderClients(){
-
-  const d=
+  const d =
     await api('/api/admin/clients');
 
-  $('#clientsList').innerHTML=
-    (d.items||[])
+  $('#clientsList').innerHTML =
+    (d.items || [])
       .map(
-        x=>
-          '<div class="item">'+
-            '<strong>'+esc(x.name)+'</strong>'+
-            '<span>'+esc(x.email||'Sem e-mail')+'</span>'+
-            '<span class="pill">'+esc(x.status)+'</span>'+
-            '<span></span>'+
+        x =>
+          '<div class="item">' +
+            '<strong>' + esc(x.name) + '</strong>' +
+            '<span>' + esc(x.email || 'Sem e-mail') + '</span>' +
+            '<span class="pill">' + esc(x.status) + '</span>' +
+            '<span></span>' +
           '</div>'
       )
       .join('')
     ||
     '<div class="empty">Nenhum cliente cadastrado.</div>';
-
 }
 
+let crudProjects = [];
 
-let crudProjects=[];
+async function refreshCrudProjects() {
 
-
-async function refreshCrudProjects(){
-
-  const d=
+  const d =
     await api('/api/admin/projects');
 
-  crudProjects=d.items||[];
+  crudProjects = d.items || [];
 
-  const clientSelect=
-    document.querySelector('#clientSelect');
-
-  const captureSelect=
+  const captureSelect =
     document.querySelector('#captureProjectSelect');
 
-  if(captureSelect){
+  if (captureSelect) {
 
-    captureSelect.innerHTML=
+    captureSelect.innerHTML =
       crudProjects
         .map(
-          x=>
-            '<option value="'+x.id+'">'+
-            esc(x.name)+
+          x =>
+            '<option value="' + x.id + '">' +
+            esc(x.name) +
             '</option>'
         )
         .join('');
-
   }
 
   return crudProjects;
 }
 
+async function renderProjects() {
 
-async function renderProjects(){
-
-  const d=
+  const d =
     await api('/api/admin/projects');
 
-  crudProjects=d.items||[];
+  crudProjects = d.items || [];
 
-  $('#projectsList').innerHTML=
+  $('#projectsList').innerHTML =
     crudProjects
       .map(
-        x=>
-          '<div class="item">'+
-            '<strong>'+esc(x.name)+'</strong>'+
-            '<span>'+esc(x.client_name||'')+'</span>'+
-            '<span class="pill">'+esc(x.status)+'</span>'+
-            '<span class="actions">'+
-              '<button class="btn alt" data-project-edit="'+x.id+'">'+
-                'Editar'+
-              '</button>'+
-              '<button class="btn alt" data-project-captures="'+x.id+'">'+
-                'Captações'+
-              '</button>'+
-            '</span>'+
+        x =>
+          '<div class="item">' +
+            '<strong>' + esc(x.name) + '</strong>' +
+            '<span>' + esc(x.client_name || '') + '</span>' +
+            '<span class="pill">' + esc(x.status) + '</span>' +
+            '<span class="actions">' +
+              '<button class="btn alt" data-project-edit="' + x.id + '">' +
+                'Editar' +
+              '</button>' +
+              '<button class="btn alt" data-project-captures="' + x.id + '">' +
+                'Captações' +
+              '</button>' +
+            '</span>' +
           '</div>'
       )
       .join('')
     ||
     '<div class="empty">Nenhum projeto cadastrado.</div>';
 
-
   document
     .querySelectorAll('[data-project-edit]')
     .forEach(
-      b=>b.onclick=()=>{
+      b => b.onclick = () => {
 
-        const x=
+        const x =
           crudProjects.find(
-            v=>
-              v.id===
+            v =>
+              v.id ===
               b.dataset.projectEdit
           );
 
-        if(!x)return;
+        if (!x)
+          return;
 
-        const f=
+        const f =
           document.querySelector(
             '#projectEditForm'
           );
 
         f.reset();
 
-        f.id.value=x.id;
-        f.name.value=x.name||'';
-        f.location_text.value=
-          x.location_text||'';
-        f.description.value=
-          x.description||'';
-        f.visibility.value=
-          x.visibility||'private';
+        f.id.value = x.id;
+        f.name.value = x.name || '';
+        f.location_text.value =
+          x.location_text || '';
+        f.description.value =
+          x.description || '';
+        f.visibility.value =
+          x.visibility || 'private';
 
         document
           .querySelector(
             '#projectEditDialog'
           )
           .showModal();
-
       }
     );
-
 
   document
     .querySelectorAll(
       '[data-project-captures]'
     )
     .forEach(
-      b=>b.onclick=()=>{
+      b => b.onclick = () => {
 
         section('captures');
 
         setTimeout(
-          ()=>{
+          () => {
 
-            const add=
+            const add =
               [
                 ...document.querySelectorAll(
                   '[data-capture-new]'
                 )
               ]
               .find(
-                x=>
-                  x.dataset.captureNew===
+                x =>
+                  x.dataset.captureNew ===
                   b.dataset.projectCaptures
               );
 
-            if(add){
+            if (add) {
               add.scrollIntoView({
                 behavior:'smooth',
                 block:'center'
               });
             }
-
           },
           100
         );
-
       }
     );
-
 }
 
+function openNewCapture(projectId) {
 
-function openNewCapture(projectId){
-
-  const f=
+  const f =
     document.querySelector(
       '#captureForm'
     );
 
   f.reset();
 
-  f.id.value='';
-  f.projectId.disabled=false;
+  f.id.value = '';
+  f.projectId.disabled = false;
 
   document
     .querySelector(
       '#captureDialogTitle'
     )
-    .textContent='Nova captação';
+    .textContent = 'Nova captação';
 
   refreshCrudProjects()
     .then(
-      ()=>{
+      () => {
 
-        if(projectId){
-          f.projectId.value=
+        if (projectId) {
+          f.projectId.value =
             projectId;
         }
 
@@ -1013,73 +1084,70 @@ function openNewCapture(projectId){
             '#captureDialog'
           )
           .showModal();
-
       }
     )
     .catch(
-      e=>alert(e.message)
+      e => alert(e.message)
     );
-
 }
-
 
 async function editCapture(
   projectId,
   captureId
-){
+) {
 
-  try{
+  try {
 
-    const d=
+    const d =
       await api(
-        '/api/admin/projects/'+
-        projectId+
+        '/api/admin/projects/' +
+        projectId +
         '/captures'
       );
 
-    const x=
-      (d.items||[])
+    const x =
+      (d.items || [])
         .find(
-          v=>v.id===captureId
+          v => v.id === captureId
         );
 
-    if(!x){
+    if (!x) {
       throw new Error(
         'Captação não encontrada.'
       );
     }
 
-    const f=
+    const f =
       document.querySelector(
         '#captureForm'
       );
 
     f.reset();
 
-    f.id.value=x.id;
+    f.id.value = x.id;
 
     await refreshCrudProjects();
 
-    f.projectId.value=
+    f.projectId.value =
       projectId;
 
-    f.projectId.disabled=true;
+    f.projectId.disabled = true;
 
-    f.capturedAt.value=
-      (x.captured_at||'')
+    f.capturedAt.value =
+      (x.captured_at || '')
         .slice(0,16);
 
-    f.title.value=
-      x.title||'';
+    f.title.value =
+      x.title || '';
 
-    f.description.value=
-      x.description||'';
+    f.description.value =
+      x.description || '';
 
     document
       .querySelector(
         '#captureDialogTitle'
       )
-      .textContent='Editar captação';
+      .textContent = 'Editar captação';
 
     document
       .querySelector(
@@ -1087,99 +1155,94 @@ async function editCapture(
       )
       .showModal();
 
-  }catch(e){
+  } catch(e) {
 
     alert(e.message);
-
   }
-
 }
 
+async function renderCaptures() {
 
-async function renderCaptures(){
-
-  const projects=
+  const projects =
     await refreshCrudProjects();
 
-  if(!projects.length){
+  if (!projects.length) {
 
     document
       .querySelector(
         '#capturesList'
       )
-      .innerHTML=
-        '<div class="empty">'+
-        'Crie um projeto antes de adicionar captações.'+
+      .innerHTML =
+        '<div class="empty">' +
+        'Crie um projeto antes de adicionar captações.' +
         '</div>';
 
     return;
-
   }
 
-  const groups=
+  const groups =
     await Promise.all(
       projects.map(
-        async p=>({
+        async p => ({
 
           project:p,
 
           items:
             (
               await api(
-                '/api/admin/projects/'+
-                p.id+
+                '/api/admin/projects/' +
+                p.id +
                 '/captures'
               )
-            ).items||[]
+            ).items || []
 
         })
       )
     );
 
-
   document
     .querySelector(
       '#capturesList'
     )
-    .innerHTML=
+    .innerHTML =
       groups
         .map(
-          g=>
+          g =>
 
-            '<div style="padding:18px 20px;border-bottom:1px solid var(--line)">'+
+            '<div style="padding:18px 20px;border-bottom:1px solid var(--line)">' +
 
-              '<div class="toolbar" style="margin:0 0 10px">'+
+              '<div class="toolbar" style="margin:0 0 10px">' +
 
-                '<strong>'+
-                  esc(g.project.name)+
-                '</strong>'+
+                '<strong>' +
+                  esc(g.project.name) +
+                '</strong>' +
 
-                '<button class="btn gold" data-capture-new="'+g.project.id+'">'+
-                  'Nova captação'+
-                '</button>'+
+                '<button class="btn gold" data-capture-new="' + g.project.id + '">' +
+                  'Nova captação' +
+                '</button>' +
 
-              '</div>'+
+              '</div>' +
 
               (
                 g.items
                   .map(
-                    x=>
+                    x =>
 
-                      '<div class="item">'+
+                      '<div class="item">' +
 
-                        '<strong>'+
+                        '<strong>' +
                           esc(
-                            x.title||
+                            x.title ||
                             new Date(
                               x.captured_at
                             )
                             .toLocaleDateString(
                               'pt-BR'
                             )
-                          )+
-                        '</strong>'+
+                          ) +
+                        '</strong>' +
 
-                        '<span>'+
+                        '<span>' +
                           esc(
                             new Date(
                               x.captured_at
@@ -1187,230 +1250,213 @@ async function renderCaptures(){
                             .toLocaleString(
                               'pt-BR'
                             )
-                          )+
-                        '</span>'+
+                          ) +
+                        '</span>' +
 
-                        '<span class="pill">'+
-                          esc(x.status)+
-                        '</span>'+
+                        '<span class="pill">' +
+                          esc(x.status) +
+                        '</span>' +
 
-                        '<button class="btn alt" data-capture-edit="'+x.id+'" data-project="'+g.project.id+'">'+
-                          'Editar'+
-                        '</button>'+
+                        '<button class="btn alt" data-capture-edit="' + x.id + '" data-project="' + g.project.id + '">' +
+                          'Editar' +
+                        '</button>' +
 
                       '</div>'
-
                   )
                   .join('')
                 ||
-                '<div class="empty">'+
-                  'Nenhuma captação.'+
+                '<div class="empty">' +
+                  'Nenhuma captação.' +
                 '</div>'
-              )+
+              ) +
 
             '</div>'
-
         )
         .join('');
-
 
   document
     .querySelectorAll(
       '[data-capture-new]'
     )
     .forEach(
-      b=>b.onclick=
-        ()=>
+      b => b.onclick =
+        () =>
           openNewCapture(
             b.dataset.captureNew
           )
     );
-
 
   document
     .querySelectorAll(
       '[data-capture-edit]'
     )
     .forEach(
-      b=>b.onclick=
-        ()=>
+      b => b.onclick =
+        () =>
           editCapture(
             b.dataset.project,
             b.dataset.captureEdit
           )
     );
-
 }
 
+async function renderAssets() {
 
-async function renderAssets(){
+  try {
 
-  try{
-
-    const d=
+    const d =
       await api(
         '/api/admin/assets'
       );
 
-    $('#assetsList').innerHTML=
-      (d.items||[])
+    $('#assetsList').innerHTML =
+      (d.items || [])
         .map(
-          x=>
-            '<div class="item">'+
-              '<strong>'+esc(x.title||x.original_name||'Arquivo')+'</strong>'+
-              '<span>'+esc(x.type||'')+'</span>'+
-              '<span class="pill">'+esc(x.status||'')+'</span>'+
-              '<span></span>'+
+          x =>
+            '<div class="item">' +
+              '<strong>' + esc(x.title || x.original_name || 'Arquivo') + '</strong>' +
+              '<span>' + esc(x.type || '') + '</span>' +
+              '<span class="pill">' + esc(x.status || '') + '</span>' +
+              '<span></span>' +
             '</div>'
         )
         .join('')
       ||
       '<div class="empty">Nenhum arquivo encontrado.</div>';
 
-  }catch(e){
+  } catch(e) {
 
-    $('#assetsList').innerHTML=
-      '<div class="empty">'+
-      esc(e.message)+
+    $('#assetsList').innerHTML =
+      '<div class="empty">' +
+      esc(e.message) +
       '</div>';
-
   }
-
 }
 
+async function renderAudit() {
 
-async function renderAudit(){
+  try {
 
-  try{
-
-    const d=
+    const d =
       await api(
         '/api/admin/audit'
       );
 
-    $('#auditList').innerHTML=
-      (d.items||[])
+    $('#auditList').innerHTML =
+      (d.items || [])
         .map(
-          x=>
-            '<div class="item">'+
-              '<strong>'+esc(x.action||'Ação')+'</strong>'+
-              '<span>'+esc(x.actor_email||'')+'</span>'+
-              '<span>'+esc(x.created_at||'')+'</span>'+
-              '<span></span>'+
+          x =>
+            '<div class="item">' +
+              '<strong>' + esc(x.action || 'Ação') + '</strong>' +
+              '<span>' + esc(x.actor_email || '') + '</span>' +
+              '<span>' + esc(x.created_at || '') + '</span>' +
+              '<span></span>' +
             '</div>'
         )
         .join('')
       ||
       '<div class="empty">Nenhum registro.</div>';
 
-  }catch(e){
+  } catch(e) {
 
-    $('#auditList').innerHTML=
-      '<div class="empty">'+
-      esc(e.message)+
+    $('#auditList').innerHTML =
+      '<div class="empty">' +
+      esc(e.message) +
       '</div>';
-
   }
-
 }
 
-
-async function load(){
+async function load() {
 
   const [
     clients,
     projects
-  ]=
+  ] =
   await Promise.all([
     api('/api/admin/clients'),
     api('/api/admin/projects')
   ]);
 
-  const clientItems=
-    clients.items||[];
+  const clientItems =
+    clients.items || [];
 
-  const projectItems=
-    projects.items||[];
+  const projectItems =
+    projects.items || [];
 
-  crudProjects=
+  crudProjects =
     projectItems;
-
 
   document
     .querySelector(
       '#clientSelect'
     )
-    .innerHTML=
+    .innerHTML =
       clientItems
         .map(
-          x=>
-            '<option value="'+x.id+'">'+
-            esc(x.name)+
+          x =>
+            '<option value="' + x.id + '">' +
+            esc(x.name) +
             '</option>'
         )
         .join('');
 
+  $('#metrics').innerHTML =
 
-  $('#metrics').innerHTML=
+    '<div class="card">' +
+      '<div class="muted">Clientes</div>' +
+      '<div class="metric">' + clientItems.length + '</div>' +
+    '</div>' +
 
-    '<div class="card">'+
-      '<div class="muted">Clientes</div>'+
-      '<div class="metric">'+clientItems.length+'</div>'+
-    '</div>'+
+    '<div class="card">' +
+      '<div class="muted">Projetos</div>' +
+      '<div class="metric">' + projectItems.length + '</div>' +
+    '</div>' +
 
-    '<div class="card">'+
-      '<div class="muted">Projetos</div>'+
-      '<div class="metric">'+projectItems.length+'</div>'+
-    '</div>'+
-
-    '<div class="card">'+
-      '<div class="muted">Portal</div>'+
-      '<div class="metric">Online</div>'+
+    '<div class="card">' +
+      '<div class="muted">Portal</div>' +
+      '<div class="metric">Online</div>' +
     '</div>';
 
-
-  $('#recent').innerHTML=
+  $('#recent').innerHTML =
     projectItems
       .slice(0,8)
       .map(
-        x=>
-          '<div class="item">'+
-            '<strong>'+esc(x.name)+'</strong>'+
-            '<span>'+esc(x.client_name||'')+'</span>'+
-            '<span class="pill">'+esc(x.status||'')+'</span>'+
-            '<span></span>'+
+        x =>
+          '<div class="item">' +
+            '<strong>' + esc(x.name) + '</strong>' +
+            '<span>' + esc(x.client_name || '') + '</span>' +
+            '<span class="pill">' + esc(x.status || '') + '</span>' +
+            '<span></span>' +
           '</div>'
       )
       .join('')
     ||
     '<div class="empty">Nenhuma atividade recente.</div>';
-
 }
-
 
 document
   .querySelector(
     '#clientForm'
   )
-  .onsubmit=
-    async e=>{
+  .onsubmit =
+    async e => {
 
       e.preventDefault();
 
-      const f=e.currentTarget;
-      const m=
+      const f = e.currentTarget;
+      const m =
         f.querySelector(
           '[data-msg]'
         );
 
-      m.textContent='Salvando…';
+      m.textContent = 'Salvando…';
 
-      const d=
+      const d =
         Object.fromEntries(
           new FormData(f)
         );
 
-      try{
+      try {
 
         await api(
           '/api/admin/clients',
@@ -1426,44 +1472,40 @@ document
 
         f.reset();
 
-        m.textContent='';
+        m.textContent = '';
 
         await load();
-
         await renderClients();
 
-      }catch(x){
+      } catch(x) {
 
-        m.textContent=x.message;
-
+        m.textContent = x.message;
       }
-
     };
-
 
 document
   .querySelector(
     '#projectForm'
   )
-  .onsubmit=
-    async e=>{
+  .onsubmit =
+    async e => {
 
       e.preventDefault();
 
-      const f=e.currentTarget;
-      const m=
+      const f = e.currentTarget;
+      const m =
         f.querySelector(
           '[data-msg]'
         );
 
-      m.textContent='Salvando…';
+      m.textContent = 'Salvando…';
 
-      const d=
+      const d =
         Object.fromEntries(
           new FormData(f)
         );
 
-      try{
+      try {
 
         await api(
           '/api/admin/projects',
@@ -1479,52 +1521,48 @@ document
 
         f.reset();
 
-        m.textContent='';
+        m.textContent = '';
 
         await load();
-
         await renderProjects();
 
-      }catch(x){
+      } catch(x) {
 
-        m.textContent=x.message;
-
+        m.textContent = x.message;
       }
-
     };
-
 
 document
   .querySelector(
     '#projectEditForm'
   )
-  .onsubmit=
-    async e=>{
+  .onsubmit =
+    async e => {
 
       e.preventDefault();
 
-      const f=e.currentTarget;
+      const f = e.currentTarget;
 
-      const m=
+      const m =
         f.querySelector(
           '[data-msg]'
         );
 
-      const d=
+      const d =
         Object.fromEntries(
           new FormData(f)
         );
 
-      const id=d.id;
+      const id = d.id;
 
       delete d.id;
 
-      m.textContent='Salvando…';
+      m.textContent = 'Salvando…';
 
-      try{
+      try {
 
         await api(
-          '/api/admin/projects/'+id,
+          '/api/admin/projects/' + id,
           {
             method:'PATCH',
             body:JSON.stringify(d)
@@ -1535,44 +1573,40 @@ document
           'dialog'
         ).close();
 
-        m.textContent='';
+        m.textContent = '';
 
         await load();
-
         await renderProjects();
 
-      }catch(x){
+      } catch(x) {
 
-        m.textContent=x.message;
-
+        m.textContent = x.message;
       }
-
     };
-
 
 document
   .querySelector(
     '#captureForm'
   )
-  .onsubmit=
-    async e=>{
+  .onsubmit =
+    async e => {
 
       e.preventDefault();
 
-      const f=e.currentTarget;
+      const f = e.currentTarget;
 
-      const m=
+      const m =
         f.querySelector(
           '[data-msg]'
         );
 
-      const id=
+      const id =
         f.id.value;
 
-      const projectId=
+      const projectId =
         f.projectId.value;
 
-      const data={
+      const data = {
         capturedAt:
           f.capturedAt.value,
 
@@ -1583,14 +1617,14 @@ document
           f.description.value
       };
 
-      m.textContent='Salvando…';
+      m.textContent = 'Salvando…';
 
-      try{
+      try {
 
-        if(id){
+        if (id) {
 
           await api(
-            '/api/admin/captures/'+id,
+            '/api/admin/captures/' + id,
             {
               method:'PATCH',
 
@@ -1607,26 +1641,24 @@ document
 
                 description:
                   data.description
-
               })
             }
           );
 
-        }else{
+        } else {
 
           await api(
-            '/api/admin/projects/'+
-            projectId+
+            '/api/admin/projects/' +
+            projectId +
             '/captures',
             {
               method:'POST',
               body:JSON.stringify(data)
             }
           );
-
         }
 
-        f.projectId.disabled=false;
+        f.projectId.disabled = false;
 
         f.closest(
           'dialog'
@@ -1634,114 +1666,105 @@ document
 
         f.reset();
 
-        m.textContent='';
+        m.textContent = '';
 
         await load();
-
         await renderCaptures();
 
-      }catch(x){
+      } catch(x) {
 
-        m.textContent=x.message;
-
+        m.textContent = x.message;
       }
-
     };
-
 
 document
   .querySelector(
     '#refresh'
   )
-  .onclick=
-    async ()=>{
+  .onclick =
+    async () => {
 
       await load();
 
-      const current=
+      const current =
         document
           .querySelector(
             '.section.active'
           )?.id;
 
-      if(current){
+      if (current) {
         section(current);
       }
-
     };
-
 
 document
   .querySelector(
     '#logout'
   )
-  .onclick=
-    async ()=>{
+  .onclick =
+    async () => {
 
-      try{
+      try {
         await api(
           '/api/auth/logout',
-          {method:'POST'}
+          { method:'POST' }
         );
-      }catch{}
+      } catch {}
 
       location.reload();
-
     };
 
+async function finishAdminLogin() {
 
-async function finishAdminLogin(){
-
-  const me=
+  const me =
     await api(
       '/api/auth/me'
     );
 
-  csrf=
-    me.csrfToken||
+  csrf =
+    me.csrfToken ||
     csrf;
 
   document
     .querySelector(
       '#login'
     )
-    .hidden=true;
+    .hidden = true;
 
   document
     .querySelector(
       '#app'
     )
-    .hidden=false;
+    .hidden = false;
 
   await load();
-
 }
-
 
 document
   .querySelector(
     '#loginForm'
   )
-  .onsubmit=
-    async e=>{
+  .onsubmit =
+    async e => {
 
       e.preventDefault();
 
-      const m=
+      const m =
         document.querySelector(
           '#loginMsg'
         );
 
-      m.textContent=
+      m.textContent =
         'Verificando…';
 
-      try{
+      try {
 
-        const d=
+        const d =
           await api(
             '/api/auth/login',
             {
               method:'POST',
+
               body:JSON.stringify({
                 email:
                   document
@@ -1760,57 +1783,52 @@ document
             }
           );
 
-        if(d.mfaRequired){
+        if (d.mfaRequired) {
 
-          m.textContent=
+          m.textContent =
             'Esta conta exige MFA. Use o fluxo de autenticação configurado.';
 
           return;
-
         }
 
-        csrf=
-          d.csrfToken||
+        csrf =
+          d.csrfToken ||
           '';
 
         await finishAdminLogin();
 
-      }catch(x){
+      } catch(x) {
 
-        m.textContent=
+        m.textContent =
           x.message;
-
       }
-
     };
-
 
 api('/api/auth/me')
   .then(
-    async d=>{
+    async d => {
 
-      csrf=
-        d.csrfToken||
+      csrf =
+        d.csrfToken ||
         '';
 
       await finishAdminLogin();
-
     }
   )
-  .catch(()=>{});
+  .catch(() => {});
 
 </script>
 
 </body>
 </html>`;
 
-  return new Response(page,{
+  return new Response(page, {
     status:200,
     headers:{
       'content-type':'text/html; charset=utf-8',
       'cache-control':'no-store',
       'content-security-policy':
-        `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; img-src 'self' data:; base-uri 'none'`
+        \`default-src 'none'; script-src 'nonce-\${nonce}'; style-src 'nonce-\${nonce}'; connect-src 'self'; img-src 'self' data:; base-uri 'none'\`
     }
   });
 }
