@@ -2069,7 +2069,7 @@ api('/api/auth/me')
       'content-type': 'text/html; charset=utf-8',
       'cache-control': 'no-store',
       'content-security-policy':
-        \`default-src 'none'; script-src 'nonce-\${nonce}'; style-src 'nonce-\${nonce}'; connect-src 'self'; img-src 'self' data:; base-uri 'none'\`
+        `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; img-src 'self' data:; base-uri 'none'`
     }
   });
 }
