@@ -355,15 +355,6 @@ dialog::backdrop{
 Entrar
 </button>
 
-<button
-  id="recoverOpen"
-  class="btn alt"
-  type="button"
-  style="width:100%;margin-top:10px"
->
-Redefinir senha com MFA
-</button>
-
 </form>
 </div>
 
@@ -416,6 +407,7 @@ Atualizar
 
 <div class="toolbar">
 <h2>Atividade recente</h2>
+
 <button class="btn gold" data-open="clientDialog">
 Novo cliente
 </button>
@@ -551,7 +543,6 @@ Abrir auditoria completa
 </div>
 
 <dialog id="clientDialog">
-
 <form id="clientForm" class="form">
 
 <h2>Novo cliente</h2>
@@ -572,28 +563,30 @@ Abrir auditoria completa
 </div>
 
 <div class="form-actions">
+
 <button type="button" class="btn alt" data-close>
 Cancelar
 </button>
+
 <button class="btn gold">
 Criar cliente
 </button>
+
 </div>
 
 <div class="msg" data-msg></div>
 
 </form>
-
 </dialog>
 
 <dialog id="projectDialog">
-
 <form id="projectForm" class="form">
 
 <h2>Novo projeto</h2>
 
 <div class="field">
 <label>Cliente</label>
+
 <select
   name="clientId"
   id="clientSelect"
@@ -617,22 +610,23 @@ Criar cliente
 </div>
 
 <div class="form-actions">
+
 <button type="button" class="btn alt" data-close>
 Cancelar
 </button>
+
 <button class="btn gold">
 Criar projeto
 </button>
+
 </div>
 
 <div class="msg" data-msg></div>
 
 </form>
-
 </dialog>
 
 <dialog id="captureDialog">
-
 <form id="captureForm" class="form">
 
 <input name="id" type="hidden">
@@ -643,6 +637,7 @@ Nova captação
 
 <div class="field">
 <label>Projeto</label>
+
 <select
   name="projectId"
   id="captureProjectSelect"
@@ -652,6 +647,7 @@ Nova captação
 
 <div class="field">
 <label>Data e hora</label>
+
 <input
   name="capturedAt"
   type="datetime-local"
@@ -691,7 +687,6 @@ Salvar captação
 </dialog>
 
 <dialog id="projectEditDialog">
-
 <form id="projectEditForm" class="form">
 
 <input name="id" type="hidden">
@@ -717,19 +712,9 @@ Salvar captação
 <label>Visibilidade</label>
 
 <select name="visibility">
-
-<option value="private">
-Privado
-</option>
-
-<option value="shared">
-Compartilhado
-</option>
-
-<option value="public_demo">
-Demonstração pública
-</option>
-
+<option value="private">Privado</option>
+<option value="shared">Compartilhado</option>
+<option value="public_demo">Demonstração pública</option>
 </select>
 
 </div>
@@ -755,12 +740,63 @@ Salvar alterações
 </form>
 </dialog>
 
+<dialog id="mfaDialog">
+<form id="mfaForm" class="form">
+
+<div class="eyebrow">
+Verificação em duas etapas
+</div>
+
+<h2>Confirme o acesso</h2>
+
+<p class="muted">
+Digite o código exibido no seu aplicativo autenticador.
+</p>
+
+<div class="field">
+
+<label>
+Código do autenticador
+</label>
+
+<input
+  id="mfaCode"
+  inputmode="numeric"
+  autocomplete="one-time-code"
+  maxlength="8"
+  required
+>
+
+</div>
+
+<div id="mfaMsg" class="msg"></div>
+
+<div class="form-actions">
+
+<button
+  type="button"
+  id="mfaCancel"
+  class="btn alt"
+>
+Cancelar
+</button>
+
+<button class="btn gold">
+Confirmar código
+</button>
+
+</div>
+
+</form>
+</dialog>
+
 <script nonce="${nonce}">
 
 let csrf = '';
 let mfaChallenge = '';
 
-const $ = s => document.querySelector(s);
+const $ = s =>
+  document.querySelector(s);
 
 const esc = v =>
   String(v ?? '').replace(
@@ -778,21 +814,27 @@ async function api(p, o = {}) {
 
   o.headers = {
     'content-type':'application/json',
-    ...(csrf ? {'x-csrf-token': csrf} : {}),
+    ...(csrf ? {'x-csrf-token':csrf} : {}),
     ...(o.headers || {})
   };
 
-  const r = await fetch(p, o);
+  const r =
+    await fetch(p, o);
 
-  const d = await r.json().catch(() => ({}));
+  const d =
+    await r.json().catch(() => ({}));
 
   if (!r.ok) {
+
     throw Object.assign(
       new Error(
         d.error?.message ||
         'Falha na operação'
       ),
-      { status:r.status }
+      {
+        status:r.status,
+        data:d
+      }
     );
   }
 
@@ -814,19 +856,21 @@ function section(name) {
   document
     .querySelectorAll('.section')
     .forEach(
-      x => x.classList.toggle(
-        'active',
-        x.id === name
-      )
+      x =>
+        x.classList.toggle(
+          'active',
+          x.id === name
+        )
     );
 
   document
     .querySelectorAll('[data-section]')
     .forEach(
-      x => x.classList.toggle(
-        'active',
-        x.dataset.section === name
-      )
+      x =>
+        x.classList.toggle(
+          'active',
+          x.dataset.section === name
+        )
     );
 
   $('#title').textContent =
@@ -851,67 +895,89 @@ function section(name) {
 document
   .querySelectorAll('[data-section]')
   .forEach(
-    b => b.onclick = () =>
-      section(b.dataset.section)
+    b =>
+      b.onclick =
+        () =>
+          section(
+            b.dataset.section
+          )
   );
 
 document
   .querySelectorAll('[data-open]')
   .forEach(
-    b => b.onclick = () => {
+    b =>
+      b.onclick =
+        () => {
 
-      const id = b.dataset.open;
+          const id =
+            b.dataset.open;
 
-      if (id === 'captureDialog') {
-        openNewCapture();
-        return;
-      }
+          if (id === 'captureDialog') {
 
-      document
-        .querySelector('#' + id)
-        ?.showModal();
-    }
+            openNewCapture();
+
+            return;
+          }
+
+          document
+            .querySelector('#' + id)
+            ?.showModal();
+        }
   );
 
 document
   .querySelectorAll('[data-close]')
   .forEach(
-    b => b.onclick = () =>
-      b.closest('dialog')?.close()
+    b =>
+      b.onclick =
+        () =>
+          b.closest('dialog')?.close()
   );
 
 document
   .querySelectorAll('[data-crud-close]')
   .forEach(
-    b => b.onclick = () => {
+    b =>
+      b.onclick =
+        () => {
 
-      b.closest('dialog')?.close();
+          b.closest('dialog')?.close();
 
-      const f = b.closest('form');
+          const f =
+            b.closest('form');
 
-      if (
-        f &&
-        f.id === 'captureForm'
-      ) {
-        f.projectId.disabled = false;
-      }
-    }
+          if (
+            f &&
+            f.id === 'captureForm'
+          ) {
+            f.projectId.disabled = false;
+          }
+        }
   );
 
 async function renderClients() {
 
   const d =
-    await api('/api/admin/clients');
+    await api(
+      '/api/admin/clients'
+    );
 
   $('#clientsList').innerHTML =
     (d.items || [])
       .map(
         x =>
           '<div class="item">' +
-            '<strong>' + esc(x.name) + '</strong>' +
-            '<span>' + esc(x.email || 'Sem e-mail') + '</span>' +
-            '<span class="pill">' + esc(x.status) + '</span>' +
-            '<span></span>' +
+          '<strong>' +
+          esc(x.name) +
+          '</strong>' +
+          '<span>' +
+          esc(x.email || 'Sem e-mail') +
+          '</span>' +
+          '<span class="pill">' +
+          esc(x.status || '') +
+          '</span>' +
+          '<span></span>' +
           '</div>'
       )
       .join('')
@@ -924,12 +990,17 @@ let crudProjects = [];
 async function refreshCrudProjects() {
 
   const d =
-    await api('/api/admin/projects');
+    await api(
+      '/api/admin/projects'
+    );
 
-  crudProjects = d.items || [];
+  crudProjects =
+    d.items || [];
 
   const captureSelect =
-    document.querySelector('#captureProjectSelect');
+    document.querySelector(
+      '#captureProjectSelect'
+    );
 
   if (captureSelect) {
 
@@ -937,7 +1008,9 @@ async function refreshCrudProjects() {
       crudProjects
         .map(
           x =>
-            '<option value="' + x.id + '">' +
+            '<option value="' +
+            esc(x.id) +
+            '">' +
             esc(x.name) +
             '</option>'
         )
@@ -950,26 +1023,47 @@ async function refreshCrudProjects() {
 async function renderProjects() {
 
   const d =
-    await api('/api/admin/projects');
+    await api(
+      '/api/admin/projects'
+    );
 
-  crudProjects = d.items || [];
+  crudProjects =
+    d.items || [];
 
   $('#projectsList').innerHTML =
     crudProjects
       .map(
         x =>
           '<div class="item">' +
-            '<strong>' + esc(x.name) + '</strong>' +
-            '<span>' + esc(x.client_name || '') + '</span>' +
-            '<span class="pill">' + esc(x.status) + '</span>' +
-            '<span class="actions">' +
-              '<button class="btn alt" data-project-edit="' + x.id + '">' +
-                'Editar' +
-              '</button>' +
-              '<button class="btn alt" data-project-captures="' + x.id + '">' +
-                'Captações' +
-              '</button>' +
-            '</span>' +
+
+          '<strong>' +
+          esc(x.name) +
+          '</strong>' +
+
+          '<span>' +
+          esc(x.client_name || '') +
+          '</span>' +
+
+          '<span class="pill">' +
+          esc(x.status || '') +
+          '</span>' +
+
+          '<span class="actions">' +
+
+          '<button class="btn alt" data-project-edit="' +
+          esc(x.id) +
+          '">' +
+          'Editar' +
+          '</button>' +
+
+          '<button class="btn alt" data-project-captures="' +
+          esc(x.id) +
+          '">' +
+          'Captações' +
+          '</button>' +
+
+          '</span>' +
+
           '</div>'
       )
       .join('')
@@ -977,42 +1071,52 @@ async function renderProjects() {
     '<div class="empty">Nenhum projeto cadastrado.</div>';
 
   document
-    .querySelectorAll('[data-project-edit]')
+    .querySelectorAll(
+      '[data-project-edit]'
+    )
     .forEach(
-      b => b.onclick = () => {
+      b =>
+        b.onclick =
+          () => {
 
-        const x =
-          crudProjects.find(
-            v =>
-              v.id ===
-              b.dataset.projectEdit
-          );
+            const x =
+              crudProjects.find(
+                v =>
+                  v.id ===
+                  b.dataset.projectEdit
+              );
 
-        if (!x)
-          return;
+            if (!x)
+              return;
 
-        const f =
-          document.querySelector(
-            '#projectEditForm'
-          );
+            const f =
+              document.querySelector(
+                '#projectEditForm'
+              );
 
-        f.reset();
+            f.reset();
 
-        f.id.value = x.id;
-        f.name.value = x.name || '';
-        f.location_text.value =
-          x.location_text || '';
-        f.description.value =
-          x.description || '';
-        f.visibility.value =
-          x.visibility || 'private';
+            f.elements.id.value =
+              x.id;
 
-        document
-          .querySelector(
-            '#projectEditDialog'
-          )
-          .showModal();
-      }
+            f.elements.name.value =
+              x.name || '';
+
+            f.elements.location_text.value =
+              x.location_text || '';
+
+            f.elements.description.value =
+              x.description || '';
+
+            f.elements.visibility.value =
+              x.visibility || 'private';
+
+            document
+              .querySelector(
+                '#projectEditDialog'
+              )
+              .showModal();
+          }
     );
 
   document
@@ -1020,35 +1124,37 @@ async function renderProjects() {
       '[data-project-captures]'
     )
     .forEach(
-      b => b.onclick = () => {
-
-        section('captures');
-
-        setTimeout(
+      b =>
+        b.onclick =
           () => {
 
-            const add =
-              [
-                ...document.querySelectorAll(
-                  '[data-capture-new]'
-                )
-              ]
-              .find(
-                x =>
-                  x.dataset.captureNew ===
-                  b.dataset.projectCaptures
-              );
+            section('captures');
 
-            if (add) {
-              add.scrollIntoView({
-                behavior:'smooth',
-                block:'center'
-              });
-            }
-          },
-          100
-        );
-      }
+            setTimeout(
+              () => {
+
+                const add =
+                  [
+                    ...document.querySelectorAll(
+                      '[data-capture-new]'
+                    )
+                  ]
+                  .find(
+                    x =>
+                      x.dataset.captureNew ===
+                      b.dataset.projectCaptures
+                  );
+
+                if (add) {
+                  add.scrollIntoView({
+                    behavior:'smooth',
+                    block:'center'
+                  });
+                }
+              },
+              100
+            );
+          }
     );
 }
 
@@ -1061,21 +1167,22 @@ function openNewCapture(projectId) {
 
   f.reset();
 
-  f.id.value = '';
-  f.projectId.disabled = false;
+  f.elements.id.value = '';
+  f.elements.projectId.disabled = false;
 
   document
     .querySelector(
       '#captureDialogTitle'
     )
-    .textContent = 'Nova captação';
+    .textContent =
+      'Nova captação';
 
   refreshCrudProjects()
     .then(
       () => {
 
         if (projectId) {
-          f.projectId.value =
+          f.elements.projectId.value =
             projectId;
         }
 
@@ -1087,7 +1194,8 @@ function openNewCapture(projectId) {
       }
     )
     .catch(
-      e => alert(e.message)
+      e =>
+        alert(e.message)
     );
 }
 
@@ -1108,10 +1216,12 @@ async function editCapture(
     const x =
       (d.items || [])
         .find(
-          v => v.id === captureId
+          v =>
+            v.id === captureId
         );
 
     if (!x) {
+
       throw new Error(
         'Captação não encontrada.'
       );
@@ -1124,30 +1234,33 @@ async function editCapture(
 
     f.reset();
 
-    f.id.value = x.id;
+    f.elements.id.value =
+      x.id;
 
     await refreshCrudProjects();
 
-    f.projectId.value =
+    f.elements.projectId.value =
       projectId;
 
-    f.projectId.disabled = true;
+    f.elements.projectId.disabled =
+      true;
 
-    f.capturedAt.value =
+    f.elements.capturedAt.value =
       (x.captured_at || '')
         .slice(0,16);
 
-    f.title.value =
+    f.elements.title.value =
       x.title || '';
 
-    f.description.value =
+    f.elements.description.value =
       x.description || '';
 
     document
       .querySelector(
         '#captureDialogTitle'
       )
-      .textContent = 'Editar captação';
+      .textContent =
+        'Editar captação';
 
     document
       .querySelector(
@@ -1168,14 +1281,10 @@ async function renderCaptures() {
 
   if (!projects.length) {
 
-    document
-      .querySelector(
-        '#capturesList'
-      )
-      .innerHTML =
-        '<div class="empty">' +
-        'Crie um projeto antes de adicionar captações.' +
-        '</div>';
+    $('#capturesList').innerHTML =
+      '<div class="empty">' +
+      'Crie um projeto antes de adicionar captações.' +
+      '</div>';
 
     return;
   }
@@ -1200,90 +1309,103 @@ async function renderCaptures() {
       )
     );
 
-  document
-    .querySelector(
-      '#capturesList'
-    )
-    .innerHTML =
-      groups
-        .map(
-          g =>
+  $('#capturesList').innerHTML =
+    groups
+      .map(
+        g => {
 
+          const captures =
+            g.items
+              .map(
+                x => {
+
+                  const dt =
+                    x.captured_at
+                      ? new Date(
+                          x.captured_at
+                        )
+                      : null;
+
+                  return (
+                    '<div class="item">' +
+
+                    '<strong>' +
+                    esc(
+                      x.title ||
+                      (
+                        dt
+                          ? dt.toLocaleDateString('pt-BR')
+                          : 'Captação'
+                      )
+                    ) +
+                    '</strong>' +
+
+                    '<span>' +
+                    esc(
+                      dt
+                        ? dt.toLocaleString('pt-BR')
+                        : ''
+                    ) +
+                    '</span>' +
+
+                    '<span class="pill">' +
+                    esc(x.status || '') +
+                    '</span>' +
+
+                    '<button class="btn alt" ' +
+                    'data-capture-edit="' +
+                    esc(x.id) +
+                    '" ' +
+                    'data-project="' +
+                    esc(g.project.id) +
+                    '">' +
+                    'Editar' +
+                    '</button>' +
+
+                    '</div>'
+                  );
+                }
+              )
+              .join('')
+            ||
+            '<div class="empty">Nenhuma captação.</div>';
+
+          return (
             '<div style="padding:18px 20px;border-bottom:1px solid var(--line)">' +
 
-              '<div class="toolbar" style="margin:0 0 10px">' +
+            '<div class="toolbar" style="margin:0 0 10px">' +
 
-                '<strong>' +
-                  esc(g.project.name) +
-                '</strong>' +
+            '<strong>' +
+            esc(g.project.name) +
+            '</strong>' +
 
-                '<button class="btn gold" data-capture-new="' + g.project.id + '">' +
-                  'Nova captação' +
-                '</button>' +
+            '<button class="btn gold" data-capture-new="' +
+            esc(g.project.id) +
+            '">' +
+            'Nova captação' +
+            '</button>' +
 
-              '</div>' +
+            '</div>' +
 
-              (
-                g.items
-                  .map(
-                    x =>
-
-                      '<div class="item">' +
-
-                        '<strong>' +
-                          esc(
-                            x.title ||
-                            new Date(
-                              x.captured_at
-                            )
-                            .toLocaleDateString(
-                              'pt-BR'
-                            )
-                          ) +
-                        '</strong>' +
-
-                        '<span>' +
-                          esc(
-                            new Date(
-                              x.captured_at
-                            )
-                            .toLocaleString(
-                              'pt-BR'
-                            )
-                          ) +
-                        '</span>' +
-
-                        '<span class="pill">' +
-                          esc(x.status) +
-                        '</span>' +
-
-                        '<button class="btn alt" data-capture-edit="' + x.id + '" data-project="' + g.project.id + '">' +
-                          'Editar' +
-                        '</button>' +
-
-                      '</div>'
-                  )
-                  .join('')
-                ||
-                '<div class="empty">' +
-                  'Nenhuma captação.' +
-                '</div>'
-              ) +
+            captures +
 
             '</div>'
-        )
-        .join('');
+          );
+        }
+      )
+      .join('');
 
   document
     .querySelectorAll(
       '[data-capture-new]'
     )
     .forEach(
-      b => b.onclick =
-        () =>
-          openNewCapture(
-            b.dataset.captureNew
-          )
+      b =>
+        b.onclick =
+          () =>
+            openNewCapture(
+              b.dataset.captureNew
+            )
     );
 
   document
@@ -1291,12 +1413,13 @@ async function renderCaptures() {
       '[data-capture-edit]'
     )
     .forEach(
-      b => b.onclick =
-        () =>
-          editCapture(
-            b.dataset.project,
-            b.dataset.captureEdit
-          )
+      b =>
+        b.onclick =
+          () =>
+            editCapture(
+              b.dataset.project,
+              b.dataset.captureEdit
+            )
     );
 }
 
@@ -1314,10 +1437,25 @@ async function renderAssets() {
         .map(
           x =>
             '<div class="item">' +
-              '<strong>' + esc(x.title || x.original_name || 'Arquivo') + '</strong>' +
-              '<span>' + esc(x.type || '') + '</span>' +
-              '<span class="pill">' + esc(x.status || '') + '</span>' +
-              '<span></span>' +
+
+            '<strong>' +
+            esc(
+              x.title ||
+              x.original_name ||
+              'Arquivo'
+            ) +
+            '</strong>' +
+
+            '<span>' +
+            esc(x.type || '') +
+            '</span>' +
+
+            '<span class="pill">' +
+            esc(x.status || '') +
+            '</span>' +
+
+            '<span></span>' +
+
             '</div>'
         )
         .join('')
@@ -1347,10 +1485,30 @@ async function renderAudit() {
         .map(
           x =>
             '<div class="item">' +
-              '<strong>' + esc(x.action || 'Ação') + '</strong>' +
-              '<span>' + esc(x.actor_email || '') + '</span>' +
-              '<span>' + esc(x.created_at || '') + '</span>' +
-              '<span></span>' +
+
+            '<strong>' +
+            esc(
+              x.action ||
+              'Ação'
+            ) +
+            '</strong>' +
+
+            '<span>' +
+            esc(
+              x.actor_email ||
+              ''
+            ) +
+            '</span>' +
+
+            '<span>' +
+            esc(
+              x.created_at ||
+              ''
+            ) +
+            '</span>' +
+
+            '<span></span>' +
+
             '</div>'
         )
         .join('')
@@ -1372,10 +1530,10 @@ async function load() {
     clients,
     projects
   ] =
-  await Promise.all([
-    api('/api/admin/clients'),
-    api('/api/admin/projects')
-  ]);
+    await Promise.all([
+      api('/api/admin/clients'),
+      api('/api/admin/projects')
+    ]);
 
   const clientItems =
     clients.items || [];
@@ -1386,35 +1544,49 @@ async function load() {
   crudProjects =
     projectItems;
 
-  document
-    .querySelector(
-      '#clientSelect'
-    )
-    .innerHTML =
-      clientItems
-        .map(
-          x =>
-            '<option value="' + x.id + '">' +
-            esc(x.name) +
-            '</option>'
-        )
-        .join('');
+  $('#clientSelect').innerHTML =
+    clientItems
+      .map(
+        x =>
+          '<option value="' +
+          esc(x.id) +
+          '">' +
+          esc(x.name) +
+          '</option>'
+      )
+      .join('');
+
+  $('#captureProjectSelect').innerHTML =
+    projectItems
+      .map(
+        x =>
+          '<option value="' +
+          esc(x.id) +
+          '">' +
+          esc(x.name) +
+          '</option>'
+      )
+      .join('');
 
   $('#metrics').innerHTML =
 
     '<div class="card">' +
-      '<div class="muted">Clientes</div>' +
-      '<div class="metric">' + clientItems.length + '</div>' +
+    '<div class="muted">Clientes</div>' +
+    '<div class="metric">' +
+    clientItems.length +
+    '</div>' +
     '</div>' +
 
     '<div class="card">' +
-      '<div class="muted">Projetos</div>' +
-      '<div class="metric">' + projectItems.length + '</div>' +
+    '<div class="muted">Projetos</div>' +
+    '<div class="metric">' +
+    projectItems.length +
+    '</div>' +
     '</div>' +
 
     '<div class="card">' +
-      '<div class="muted">Portal</div>' +
-      '<div class="metric">Online</div>' +
+    '<div class="muted">Portal</div>' +
+    '<div class="metric">Online</div>' +
     '</div>';
 
   $('#recent').innerHTML =
@@ -1423,10 +1595,21 @@ async function load() {
       .map(
         x =>
           '<div class="item">' +
-            '<strong>' + esc(x.name) + '</strong>' +
-            '<span>' + esc(x.client_name || '') + '</span>' +
-            '<span class="pill">' + esc(x.status || '') + '</span>' +
-            '<span></span>' +
+
+          '<strong>' +
+          esc(x.name) +
+          '</strong>' +
+
+          '<span>' +
+          esc(x.client_name || '') +
+          '</span>' +
+
+          '<span class="pill">' +
+          esc(x.status || '') +
+          '</span>' +
+
+          '<span></span>' +
+
           '</div>'
       )
       .join('')
@@ -1434,285 +1617,279 @@ async function load() {
     '<div class="empty">Nenhuma atividade recente.</div>';
 }
 
-document
-  .querySelector(
-    '#clientForm'
-  )
-  .onsubmit =
-    async e => {
+$('#clientForm').onsubmit =
+  async e => {
 
-      e.preventDefault();
+    e.preventDefault();
 
-      const f = e.currentTarget;
-      const m =
-        f.querySelector(
-          '[data-msg]'
-        );
+    const f =
+      e.currentTarget;
 
-      m.textContent = 'Salvando…';
+    const m =
+      f.querySelector(
+        '[data-msg]'
+      );
 
-      const d =
-        Object.fromEntries(
-          new FormData(f)
-        );
+    m.textContent =
+      'Salvando…';
 
-      try {
+    const d =
+      Object.fromEntries(
+        new FormData(f)
+      );
 
-        await api(
-          '/api/admin/clients',
-          {
-            method:'POST',
-            body:JSON.stringify(d)
-          }
-        );
+    try {
 
-        f.closest(
-          'dialog'
-        ).close();
-
-        f.reset();
-
-        m.textContent = '';
-
-        await load();
-        await renderClients();
-
-      } catch(x) {
-
-        m.textContent = x.message;
-      }
-    };
-
-document
-  .querySelector(
-    '#projectForm'
-  )
-  .onsubmit =
-    async e => {
-
-      e.preventDefault();
-
-      const f = e.currentTarget;
-      const m =
-        f.querySelector(
-          '[data-msg]'
-        );
-
-      m.textContent = 'Salvando…';
-
-      const d =
-        Object.fromEntries(
-          new FormData(f)
-        );
-
-      try {
-
-        await api(
-          '/api/admin/projects',
-          {
-            method:'POST',
-            body:JSON.stringify(d)
-          }
-        );
-
-        f.closest(
-          'dialog'
-        ).close();
-
-        f.reset();
-
-        m.textContent = '';
-
-        await load();
-        await renderProjects();
-
-      } catch(x) {
-
-        m.textContent = x.message;
-      }
-    };
-
-document
-  .querySelector(
-    '#projectEditForm'
-  )
-  .onsubmit =
-    async e => {
-
-      e.preventDefault();
-
-      const f = e.currentTarget;
-
-      const m =
-        f.querySelector(
-          '[data-msg]'
-        );
-
-      const d =
-        Object.fromEntries(
-          new FormData(f)
-        );
-
-      const id = d.id;
-
-      delete d.id;
-
-      m.textContent = 'Salvando…';
-
-      try {
-
-        await api(
-          '/api/admin/projects/' + id,
-          {
-            method:'PATCH',
-            body:JSON.stringify(d)
-          }
-        );
-
-        f.closest(
-          'dialog'
-        ).close();
-
-        m.textContent = '';
-
-        await load();
-        await renderProjects();
-
-      } catch(x) {
-
-        m.textContent = x.message;
-      }
-    };
-
-document
-  .querySelector(
-    '#captureForm'
-  )
-  .onsubmit =
-    async e => {
-
-      e.preventDefault();
-
-      const f = e.currentTarget;
-
-      const m =
-        f.querySelector(
-          '[data-msg]'
-        );
-
-      const id =
-        f.id.value;
-
-      const projectId =
-        f.projectId.value;
-
-      const data = {
-        capturedAt:
-          f.capturedAt.value,
-
-        title:
-          f.title.value,
-
-        description:
-          f.description.value
-      };
-
-      m.textContent = 'Salvando…';
-
-      try {
-
-        if (id) {
-
-          await api(
-            '/api/admin/captures/' + id,
-            {
-              method:'PATCH',
-
-              body:JSON.stringify({
-
-                captured_at:
-                  new Date(
-                    data.capturedAt
-                  )
-                  .toISOString(),
-
-                title:
-                  data.title,
-
-                description:
-                  data.description
-              })
-            }
-          );
-
-        } else {
-
-          await api(
-            '/api/admin/projects/' +
-            projectId +
-            '/captures',
-            {
-              method:'POST',
-              body:JSON.stringify(data)
-            }
-          );
+      await api(
+        '/api/admin/clients',
+        {
+          method:'POST',
+          body:JSON.stringify(d)
         }
+      );
 
-        f.projectId.disabled = false;
+      f.closest('dialog').close();
 
-        f.closest(
-          'dialog'
-        ).close();
+      f.reset();
 
-        f.reset();
-
-        m.textContent = '';
-
-        await load();
-        await renderCaptures();
-
-      } catch(x) {
-
-        m.textContent = x.message;
-      }
-    };
-
-document
-  .querySelector(
-    '#refresh'
-  )
-  .onclick =
-    async () => {
+      m.textContent = '';
 
       await load();
 
-      const current =
-        document
-          .querySelector(
-            '.section.active'
-          )?.id;
+      await renderClients();
 
-      if (current) {
-        section(current);
-      }
-    };
+    } catch(x) {
 
-document
-  .querySelector(
-    '#logout'
-  )
-  .onclick =
-    async () => {
+      m.textContent =
+        x.message;
+    }
+  };
 
-      try {
+$('#projectForm').onsubmit =
+  async e => {
+
+    e.preventDefault();
+
+    const f =
+      e.currentTarget;
+
+    const m =
+      f.querySelector(
+        '[data-msg]'
+      );
+
+    m.textContent =
+      'Salvando…';
+
+    const d =
+      Object.fromEntries(
+        new FormData(f)
+      );
+
+    try {
+
+      await api(
+        '/api/admin/projects',
+        {
+          method:'POST',
+          body:JSON.stringify(d)
+        }
+      );
+
+      f.closest('dialog').close();
+
+      f.reset();
+
+      m.textContent = '';
+
+      await load();
+
+      await renderProjects();
+
+    } catch(x) {
+
+      m.textContent =
+        x.message;
+    }
+  };
+
+$('#projectEditForm').onsubmit =
+  async e => {
+
+    e.preventDefault();
+
+    const f =
+      e.currentTarget;
+
+    const m =
+      f.querySelector(
+        '[data-msg]'
+      );
+
+    const d =
+      Object.fromEntries(
+        new FormData(f)
+      );
+
+    const id =
+      d.id;
+
+    delete d.id;
+
+    m.textContent =
+      'Salvando…';
+
+    try {
+
+      await api(
+        '/api/admin/projects/' +
+        id,
+        {
+          method:'PATCH',
+          body:JSON.stringify(d)
+        }
+      );
+
+      f.closest('dialog').close();
+
+      m.textContent = '';
+
+      await load();
+
+      await renderProjects();
+
+    } catch(x) {
+
+      m.textContent =
+        x.message;
+    }
+  };
+
+$('#captureForm').onsubmit =
+  async e => {
+
+    e.preventDefault();
+
+    const f =
+      e.currentTarget;
+
+    const m =
+      f.querySelector(
+        '[data-msg]'
+      );
+
+    const id =
+      f.elements.id.value;
+
+    const projectId =
+      f.elements.projectId.value;
+
+    const capturedAt =
+      f.elements.capturedAt.value;
+
+    const title =
+      f.elements.title.value;
+
+    const description =
+      f.elements.description.value;
+
+    m.textContent =
+      'Salvando…';
+
+    try {
+
+      if (id) {
+
         await api(
-          '/api/auth/logout',
-          { method:'POST' }
-        );
-      } catch {}
+          '/api/admin/captures/' +
+          id,
+          {
+            method:'PATCH',
 
-      location.reload();
-    };
+            body:JSON.stringify({
+              captured_at:
+                new Date(
+                  capturedAt
+                )
+                .toISOString(),
+
+              title,
+              description
+            })
+          }
+        );
+
+      } else {
+
+        await api(
+          '/api/admin/projects/' +
+          projectId +
+          '/captures',
+          {
+            method:'POST',
+
+            body:JSON.stringify({
+              capturedAt,
+              title,
+              description
+            })
+          }
+        );
+      }
+
+      f.elements.projectId.disabled =
+        false;
+
+      f.closest('dialog').close();
+
+      f.reset();
+
+      m.textContent = '';
+
+      await load();
+
+      await renderCaptures();
+
+    } catch(x) {
+
+      m.textContent =
+        x.message;
+    }
+  };
+
+$('#refresh').onclick =
+  async () => {
+
+    await load();
+
+    const current =
+      document
+        .querySelector(
+          '.section.active'
+        )
+        ?.id;
+
+    if (current) {
+      section(current);
+    }
+  };
+
+$('#logout').onclick =
+  async () => {
+
+    try {
+
+      await api(
+        '/api/auth/logout',
+        {
+          method:'POST'
+        }
+      );
+
+    } catch {}
+
+    location.reload();
+  };
 
 async function finishAdminLogin() {
 
@@ -1725,84 +1902,148 @@ async function finishAdminLogin() {
     me.csrfToken ||
     csrf;
 
-  document
-    .querySelector(
-      '#login'
-    )
-    .hidden = true;
+  $('#login').hidden =
+    true;
 
-  document
-    .querySelector(
-      '#app'
-    )
-    .hidden = false;
+  $('#app').hidden =
+    false;
 
   await load();
 }
 
-document
-  .querySelector(
-    '#loginForm'
-  )
-  .onsubmit =
-    async e => {
+$('#loginForm').onsubmit =
+  async e => {
 
-      e.preventDefault();
+    e.preventDefault();
 
-      const m =
-        document.querySelector(
-          '#loginMsg'
+    const m =
+      $('#loginMsg');
+
+    m.textContent =
+      'Verificando…';
+
+    try {
+
+      const d =
+        await api(
+          '/api/auth/login',
+          {
+            method:'POST',
+
+            body:JSON.stringify({
+              email:
+                $('#email').value,
+
+              password:
+                $('#password').value
+            })
+          }
         );
 
-      m.textContent =
-        'Verificando…';
+      if (d.mfaRequired) {
 
-      try {
-
-        const d =
-          await api(
-            '/api/auth/login',
-            {
-              method:'POST',
-
-              body:JSON.stringify({
-                email:
-                  document
-                    .querySelector(
-                      '#email'
-                    )
-                    .value,
-
-                password:
-                  document
-                    .querySelector(
-                      '#password'
-                    )
-                    .value
-              })
-            }
-          );
-
-        if (d.mfaRequired) {
-
-          m.textContent =
-            'Esta conta exige MFA. Use o fluxo de autenticação configurado.';
-
-          return;
-        }
-
-        csrf =
-          d.csrfToken ||
-          '';
-
-        await finishAdminLogin();
-
-      } catch(x) {
+        mfaChallenge =
+          d.challengeToken;
 
         m.textContent =
-          x.message;
+          '';
+
+        $('#mfaCode').value =
+          '';
+
+        $('#mfaMsg').textContent =
+          '';
+
+        $('#mfaDialog')
+          .showModal();
+
+        setTimeout(
+          () =>
+            $('#mfaCode').focus(),
+          100
+        );
+
+        return;
       }
-    };
+
+      csrf =
+        d.csrfToken ||
+        '';
+
+      await finishAdminLogin();
+
+    } catch(x) {
+
+      m.textContent =
+        x.message;
+    }
+  };
+
+$('#mfaForm').onsubmit =
+  async e => {
+
+    e.preventDefault();
+
+    const m =
+      $('#mfaMsg');
+
+    m.textContent =
+      'Confirmando…';
+
+    try {
+
+      const d =
+        await api(
+          '/api/auth/mfa/verify-login',
+          {
+            method:'POST',
+
+            body:JSON.stringify({
+              challengeToken:
+                mfaChallenge,
+
+              code:
+                $('#mfaCode')
+                  .value
+                  .trim()
+            })
+          }
+        );
+
+      csrf =
+        d.csrfToken ||
+        '';
+
+      mfaChallenge =
+        '';
+
+      $('#mfaDialog')
+        .close();
+
+      await finishAdminLogin();
+
+    } catch(x) {
+
+      m.textContent =
+        x.message;
+    }
+  };
+
+$('#mfaCancel').onclick =
+  () => {
+
+    mfaChallenge =
+      '';
+
+    $('#mfaDialog')
+      .close();
+
+    $('#password').value =
+      '';
+
+    $('#loginMsg').textContent =
+      'Digite sua senha novamente.';
+  };
 
 api('/api/auth/me')
   .then(
@@ -1823,12 +2064,12 @@ api('/api/auth/me')
 </html>`;
 
   return new Response(page, {
-  status: 200,
-  headers: {
-    'content-type': 'text/html; charset=utf-8',
-    'cache-control': 'no-store',
-    'content-security-policy':
-      `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; img-src 'self' data:; base-uri 'none'`
-  }
-});
+    status: 200,
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'cache-control': 'no-store',
+      'content-security-policy':
+        \`default-src 'none'; script-src 'nonce-\${nonce}'; style-src 'nonce-\${nonce}'; connect-src 'self'; img-src 'self' data:; base-uri 'none'\`
+    }
+  });
 }
