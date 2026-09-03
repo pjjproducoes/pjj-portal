@@ -47,7 +47,8 @@ export async function adminOverview(env:Env):Promise<Response>{
     env.DB.prepare(`SELECT (SELECT count(*) FROM clients WHERE status='active') clients,(SELECT count(*) FROM projects WHERE status!='trashed') projects,(SELECT count(*) FROM assets WHERE status!='trashed') assets,(SELECT count(*) FROM users WHERE status='active') users`).first(),
     env.DB.prepare(`SELECT j.id,j.asset_id,j.status,j.progress,j.attempt,j.max_attempts,j.error_code,j.error_message,j.queued_at,j.started_at,a.title asset_title,a.type,a.status asset_status FROM processing_jobs j JOIN assets a ON a.id=j.asset_id ORDER BY j.queued_at DESC LIMIT 30`).all(),
     env.DB.prepare(`SELECT count(*) total FROM processing_jobs WHERE status='failed'`).first(),
-    env.DB.prepare(`SELECT a.id,a.project_id,a.capture_id,a.title,a.type,a.version,a.replaces_asset_id,a.status,a.error_code,a.error_message,a.created_at,p.name project_name,
+    env.DB.prepare(`SELECT a.id,a.project_id,a.capture_id,a.title,a.type,a.size_bytes,a.version,a.replaces_asset_id,a.status,a.error_code,a.error_message,a.created_at,p.name project_name,
+      (SELECT j.id FROM processing_jobs j WHERE j.asset_id=a.id ORDER BY j.queued_at DESC LIMIT 1) job_id,
       EXISTS(SELECT 1 FROM assets newer WHERE newer.replaces_asset_id=a.id AND newer.status!='trashed') has_replacement
       FROM assets a JOIN projects p ON p.id=a.project_id WHERE a.status!='trashed' ORDER BY a.created_at DESC LIMIT 100`).all()
   ]);return json({counts,jobs:jobs.results,assets:assets.results,failures});
