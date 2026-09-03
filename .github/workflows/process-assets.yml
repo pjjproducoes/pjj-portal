@@ -51,4 +51,4 @@ jobs:
         env:
           GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON }}
           PJJ_PROCESSOR_ORIGIN: ${{ vars.PJJ_PROCESSOR_ORIGIN || 'https://pjj-portal.contato-pjjproducoes.workers.dev' }}
-        run: python processor/runner.py execute "$RUNNER_TEMP/pjj-job.json"
+        run: python processor/runner.py drain "$RUNNER_TEMP/pjj-job.json"
