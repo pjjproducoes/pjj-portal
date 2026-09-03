@@ -1823,9 +1823,12 @@ api('/api/auth/me')
 </html>`;
 
   return new Response(page, {
-    status:200,
-    headers:{
-      'content-type':'text/html; charset=utf-8',
-      'cache-control':'no-store',
-      'content-security-policy':
-  `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; img-src 'self' data:; base-uri 'none'`
+  status: 200,
+  headers: {
+    'content-type': 'text/html; charset=utf-8',
+    'cache-control': 'no-store',
+    'content-security-policy':
+      `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; img-src 'self' data:; base-uri 'none'`
+  }
+});
+}
