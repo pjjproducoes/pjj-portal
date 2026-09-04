@@ -1,3 +1,4 @@
+// @ts-ignore -- temporary diagnostic branch only; Node runtime is available in Vitest.
 import { Script } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 import { adminV3 } from '../src/admin-v3';
