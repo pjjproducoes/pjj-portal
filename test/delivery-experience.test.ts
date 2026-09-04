@@ -1,3 +1,4 @@
+import { Script } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 import { adminV3 } from '../src/admin-v3';
 import { detectedLogoMime, updateEntity } from '../src/admin-ops';
@@ -94,7 +95,12 @@ describe('active administration surface', () => {
     for(const [surfaceIndex,response] of [adminUi(),adminV3(),portalV2(),operationsUi()].entries()){
       const body=await response.text(),scripts=[...body.matchAll(/<script(?: nonce="[^"]+")?>([\s\S]*?)<\/script>/g)].map(match=>match[1]);
       expect(scripts.length).toBeGreaterThan(0);
-      for(const [scriptIndex,script] of scripts.entries())try{Function(script!)}catch(error){throw new Error(`surface ${surfaceIndex}, script ${scriptIndex}: ${String(error)}`)}
+      for(const [scriptIndex,script] of scripts.entries()){
+        try{Function(script!)}catch(error){
+          try{new Script(script!,{filename:`surface-${surfaceIndex}-script-${scriptIndex}.js`})}catch(diagnostic){throw diagnostic}
+          throw new Error(`surface ${surfaceIndex}, script ${scriptIndex}: ${String(error)}`)
+        }
+      }
     }
   });
 });
